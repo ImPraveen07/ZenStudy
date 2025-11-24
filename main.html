@@ -1,0 +1,129 @@
+<!-- 📄 FILE: main.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Main Page</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to right, #6366f1, #818cf8);
+      color: white;
+      text-align: center;
+      padding-top: 80px;
+      margin: 0;
+    }
+
+    #userInfo {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 18px;
+      display: inline-block;
+      padding: 30px 40px;
+      backdrop-filter: blur(6px);
+      box-shadow: 0 0 20px rgba(255,255,255,0.15);
+      animation: fadeIn 0.6s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    img {
+      border-radius: 50%;
+      width: 120px;
+      height: 120px;
+      margin-bottom: 20px;
+      border: 4px solid white;
+    }
+
+    p {
+      font-size: 1.1em;
+      margin: 6px 0;
+    }
+
+    .logout-btn {
+      margin-top: 25px;
+      padding: 12px 26px;
+      background: white;
+      color: #6366f1;
+      border: none;
+      font-weight: bold;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 1.05em;
+      transition: 0.2s;
+    }
+
+    .logout-btn:hover {
+      transform: scale(1.07);
+      color: #4f46e5;
+    }
+
+    .error {
+      background: rgba(255, 255, 255, 0.15);
+      padding: 20px;
+      display: inline-block;
+      border-radius: 10px;
+      font-weight: bold;
+      backdrop-filter: blur(6px);
+      box-shadow: 0 0 20px rgba(255,255,255,0.15);
+    }
+  </style>
+</head>
+<body>
+
+  <div id="userInfo"></div>
+  <div id="errorMsg" class="error" style="display:none;"></div>
+
+  <script>
+    // Helper: read value from URL
+    function getQueryParam(param) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(param);
+    }
+
+    const userId = getQueryParam("user");
+    const userDiv = document.getElementById("userInfo");
+    const errorDiv = document.getElementById("errorMsg");
+
+    if (!userId) {
+      errorDiv.textContent = "❌ No User ID in URL. Please login again.";
+      errorDiv.style.display = "block";
+    } else {
+      const userDataStr = localStorage.getItem("user_" + userId);
+
+      if (!userDataStr) {
+        errorDiv.textContent = "❌ User data not found. Please login again.";
+        errorDiv.style.display = "block";
+      } else {
+        const user = JSON.parse(userDataStr);
+
+        // ⭐ Display full user info
+        userDiv.innerHTML = `
+          <h1>Welcome, ${user.username} 👋</h1>
+
+          <img src="${user.img || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'}" alt="Profile">
+
+          <p><b>User ID:</b> ${user.userId}</p>
+          <p><b>Password:</b> ${user.password}</p>
+
+          <p><b>Email:</b> ${user.googleEmail}</p>
+          <p><b>DOB:</b> ${user.dob}</p>
+
+          <button class="logout-btn" onclick="logout()">Logout</button>
+        `;
+      }
+    }
+
+    // Logout function
+    function logout() {
+      localStorage.removeItem("last_logged_in_user");
+      window.location.replace("index.html");
+    }
+  </script>
+
+</body>
+</html>
