@@ -324,459 +324,507 @@
       </div>
       <div class="offline-message">Connection Failed :(</div>
   </div>
-
 <script>
-  // --- UTILITIES ---
-  function saveModeToStorage(modeIdx) {
+const lastUser = localStorage.getItem("last_logged_in_user");
+if (lastUser && lastUser !== "null" && lastUser !== "undefined") {
+    window.location.replace(`main.html?user=${encodeURIComponent(lastUser)}`);
+}
+</script>
+<script>
+  /**
+ * ==========================================
+ * 1. FIREBASE CONFIGURATION & INITIALIZATION
+ * ==========================================
+ */
+const firebaseConfig = {
+    apiKey: "AIzaSyC9rehsf-0jkb9dAeT1-0Z1C-yRJ0YI9dA",
+    authDomain: "gymnm-ce84b.firebaseapp.com",
+    projectId: "gymnm-ce84b",
+    storageBucket: "gymnm-ce84b.appspot.com",
+    messagingSenderId: "474926929394",
+    appId: "1:474926929394:web:6abdb807caba2751a5c76b",
+    measurementId: "G-6R9S8LYZNF"
+};
+
+// Initialize Firebase only if not already initialized
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
+const db = firebase.firestore();
+
+/**
+ * ==========================================
+ * 2. UTILITY FUNCTIONS (Storage, Math, Helpers)
+ * ==========================================
+ */
+
+// Theme Storage
+function saveModeToStorage(modeIdx) {
     localStorage.setItem('ui_mode', modeIdx);
-  }
-  function getModeFromStorage() {
+}
+
+function getModeFromStorage() {
     const idx = localStorage.getItem('ui_mode');
     return idx === null ? 0 : parseInt(idx, 10);
-  }
+}
 
-  // --- SELF REDIRECT (FIXED TO MAIN.HTML) ---
-  (function() {
-    const lastUser = localStorage.getItem('last_logged_in_user');
-    // FIX: Redirect to main.html instead of jeeee.html
-    if (lastUser && lastUser !== "null" && lastUser !== "undefined" && lastUser.trim() !== "" && !window.location.search.includes('user=')) {
-      window.location.href = `main.html?user=${encodeURIComponent(lastUser)}`;
+// Random String Generator
+function generateRandomChars(length) {
+    const characters = 'abcdefghijklmnopqrstuvwxyz';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+        result += characters.charAt(Math.floor(Math.random() * characters.length));
     }
-  })();
+    return result;
+}
 
-  // --- THEME LOGIC ---
-  const modeSwitchBtn = document.getElementById('modeSwitchBtn');
-  const modeSwitchIcon = document.getElementById('modeSwitchIcon');
-  const modeWave = document.getElementById('modeWave');
-  
-  const modes = [
+// Age Validation
+function isAgeBetween7And21(dobStr) {
+    if (!dobStr) return false;
+    const dob = new Date(dobStr);
+    const today = new Date();
+    if (dob > today) return false;
+    
+    let age = today.getFullYear() - dob.getFullYear();
+    const m = today.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+    
+    return age >= 7 && age <= 21;
+}
+
+// Image to Base64 Converter (with Error Handling)
+async function imageUrlToBase64(url) {
+    try {
+        // Note: Fetching external images may fail due to CORS. 
+        // If it fails, we return null to allow signup to proceed without the image.
+        const response = await fetch(url);
+        const blob = await response.blob();
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    } catch (error) {
+        console.warn("Could not convert Google image (likely CORS):", error);
+        return null; // Return null so the account is still created
+    }
+}
+
+/**
+ * ==========================================
+ * 3. AUTO-REDIRECT LOGIC
+ * ==========================================
+ */
+
+/**
+ * ==========================================
+ * 4. THEME & VISUALS LOGIC
+ * ==========================================
+ */
+const modeSwitchBtn = document.getElementById('modeSwitchBtn');
+const modeWave = document.getElementById('modeWave');
+const modes = [
     { class: "", color: "#6366f1", tooltip: "Switch to Dark Mode" },
     { class: "dark-mode", color: "#818cf8", tooltip: "Switch to Light Mode" }
-  ];
-  
-  let modeIndex = getModeFromStorage();
-  
-  function setMode(idx) {
+];
+
+let modeIndex = getModeFromStorage();
+
+function setMode(idx) {
     document.body.classList.remove("dark-mode");
     if (modes[idx].class) document.body.classList.add(modes[idx].class);
-    modeSwitchBtn.title = modes[idx].tooltip;
+    if (modeSwitchBtn) modeSwitchBtn.title = modes[idx].tooltip;
     modeIndex = idx;
     saveModeToStorage(idx);
-  }
-  setMode(modeIndex);
+}
 
-  function waterWaveTransition(nextModeIdx, e) {
+function waterWaveTransition(nextModeIdx) {
     const btnRect = modeSwitchBtn.getBoundingClientRect();
     const cx = btnRect.left + btnRect.width / 2;
     const cy = btnRect.top + btnRect.height / 2;
-    const maxDist = Math.max(Math.hypot(cx, cy), Math.hypot(window.innerWidth - cx, cy), Math.hypot(cx, window.innerHeight - cy), Math.hypot(window.innerWidth - cx, window.innerHeight - cy));
-    
+    const maxDist = Math.max(
+        Math.hypot(cx, cy), 
+        Math.hypot(window.innerWidth - cx, cy), 
+        Math.hypot(cx, window.innerHeight - cy), 
+        Math.hypot(window.innerWidth - cx, window.innerHeight - cy)
+    );
+
     function wavePath(r, waviness = 18, waves = 8) {
-      let d = "";
-      for (let i = 0; i <= 360; i += 2) {
-        const rad = i * Math.PI / 180;
-        const wave = Math.sin(rad * waves) * waviness;
-        const x = cx + (r + wave) * Math.cos(rad);
-        const y = cy + (r + wave) * Math.sin(rad);
-        d += (i === 0 ? "M" : "L") + x + "," + y + " ";
-      }
-      d += "Z";
-      return d;
+        let d = "";
+        for (let i = 0; i <= 360; i += 2) {
+            const rad = i * Math.PI / 180;
+            const wave = Math.sin(rad * waves) * waviness;
+            const x = cx + (r + wave) * Math.cos(rad);
+            const y = cy + (r + wave) * Math.sin(rad);
+            d += (i === 0 ? "M" : "L") + x + "," + y + " ";
+        }
+        d += "Z";
+        return d;
     }
-    
-    modeWave.innerHTML = `<svg><path id="wavePath" fill="${nextModeIdx===1 ? '#6366f1' : '#fff'}" fill-opacity="0.92"/></svg>`;
+
+    modeWave.innerHTML = `<svg><path id="wavePath" fill="${nextModeIdx === 1 ? '#6366f1' : '#fff'}" fill-opacity="0.92"/></svg>`;
     modeWave.style.opacity = "1";
-    const path = document.getElementById("wavePath");
-    let r = 0, step = 0, totalSteps = 38;
     
+    const path = document.getElementById("wavePath");
+    let step = 0, totalSteps = 38;
+
     function animateWave() {
-      r = (step / totalSteps) * (maxDist + 120);
-      path.setAttribute("d", wavePath(r));
-      if (step === Math.floor(totalSteps / 2)) {
-        setMode(nextModeIdx);
-      }
-      if (step < totalSteps) {
-        step++;
-        requestAnimationFrame(animateWave);
-      } else {
-        setTimeout(() => { modeWave.style.opacity = "0"; }, 180);
-      }
+        const r = (step / totalSteps) * (maxDist + 120);
+        path.setAttribute("d", wavePath(r));
+        
+        if (step === Math.floor(totalSteps / 2)) {
+            setMode(nextModeIdx);
+        }
+        
+        if (step < totalSteps) {
+            step++;
+            requestAnimationFrame(animateWave);
+        } else {
+            setTimeout(() => { modeWave.style.opacity = "0"; }, 180);
+        }
     }
     animateWave();
-  }
-  modeSwitchBtn.onclick = function(e) {
-    const nextIdx = (modeIndex + 1) % modes.length;
-    waterWaveTransition(nextIdx, e);
-  };
+}
 
-  // --- UI HANDLERS ---
-  const signupCard = document.getElementById('signupCard');
-  const loginCard = document.getElementById('loginCard');
-  
-  document.getElementById('toLogin').onclick = () => {
-    signupCard.classList.add('hide');
-    loginCard.classList.remove('hide');
-  };
-  document.getElementById('toSignup').onclick = () => {
-    loginCard.classList.add('hide');
-    signupCard.classList.remove('hide');
-  };
-  
-  const popup = document.getElementById('profilePopup');
-  const logoImgs = document.querySelectorAll('.login-3d-logo');
-  logoImgs.forEach(logo => {
-    logo.addEventListener('click', () => {
-      document.getElementById('profilePopup').classList.toggle('open');
+// Initialize Theme
+setMode(modeIndex);
+if (modeSwitchBtn) {
+    modeSwitchBtn.onclick = function(e) {
+        const nextIdx = (modeIndex + 1) % modes.length;
+        waterWaveTransition(nextIdx, e);
+    };
+}
+
+/**
+ * ==========================================
+ * 5. 3D MOTION & GYROSCOPE LOGIC
+ * ==========================================
+ */
+const motionHandler = { listener: null };
+
+function setup3d(cardSelector, shadowSelector) {
+    const card = document.querySelector(cardSelector);
+    if (!card) return;
+    const shadow = document.querySelector(shadowSelector);
+    
+    const MOUSE_SENSITIVITY = 0.07;
+    const GYRO_SENSITIVITY = 0.6;
+    const GYRO_ACCELERATION_FACTOR = 1.4;
+    
+    let targetX = 0, targetY = 0, currentX = 0, currentY = 0;
+    let isCursorInside = false;
+    let usingGyro = false;
+    let animating = false;
+    let neutralBeta = null;
+    let neutralGamma = null;
+
+    motionHandler.listener = (event) => {
+        if (!event.gamma || !event.beta || !usingGyro) return;
+        if (neutralBeta === null) {
+            neutralBeta = event.beta;
+            neutralGamma = event.gamma;
+            return;
+        }
+        let deltaBeta = event.beta - neutralBeta;
+        let deltaGamma = event.gamma - neutralGamma;
+        let moveY = Math.sign(deltaBeta) * Math.pow(Math.abs(deltaBeta), GYRO_ACCELERATION_FACTOR);
+        let moveX = Math.sign(deltaGamma) * Math.pow(Math.abs(deltaGamma), GYRO_ACCELERATION_FACTOR);
+        targetY = -moveY * GYRO_SENSITIVITY;
+        targetX = moveX * GYRO_SENSITIVITY;
+        if (!animating) requestAnimationFrame(animateCard);
+    };
+
+    document.body.addEventListener('mousemove', e => {
+        if (usingGyro || isCursorInside) return;
+        const rect = card.getBoundingClientRect();
+        targetX = (e.clientX - rect.left - rect.width / 2) * MOUSE_SENSITIVITY;
+        targetY = -(e.clientY - rect.top - rect.height / 2) * MOUSE_SENSITIVITY;
+        if (!animating) requestAnimationFrame(animateCard);
     });
-  });
-  document.getElementById('popupCloseBtn').addEventListener('click', () => popup.classList.remove('open'));
-  popup.addEventListener('click', e => {
-    if (e.target === popup) popup.classList.remove('open');
-  });
 
-  // --- GYROSCOPE AND MOUSE CONTROL SCRIPT (EXACTLY AS YOU HAD IT) ---
-  const motionHandler = { listener: null };
-  function setup3d(cardSelector, shadowSelector) {
-      const card = document.querySelector(cardSelector);
-      if (!card) return;
-      const shadow = document.querySelector(shadowSelector);
-      const MOUSE_SENSITIVITY = 0.07;
-      const GYRO_SENSITIVITY = 0.6;
-      const GYRO_ACCELERATION_FACTOR = 1.4;
-      let targetX = 0, targetY = 0, currentX = 0, currentY = 0;
-      let isCursorInside = false;
-      let usingGyro = false;
-      let animating = false;
-      let neutralBeta = null;
-      let neutralGamma = null;
-      
-      motionHandler.listener = (event) => {
-          if (!event.gamma || !event.beta || !usingGyro) return;
-          if (neutralBeta === null) {
-              neutralBeta = event.beta;
-              neutralGamma = event.gamma;
-              return;
-          }
-          let deltaBeta = event.beta - neutralBeta;
-          let deltaGamma = event.gamma - neutralGamma;
-          let moveY = Math.sign(deltaBeta) * Math.pow(Math.abs(deltaBeta), GYRO_ACCELERATION_FACTOR);
-          let moveX = Math.sign(deltaGamma) * Math.pow(Math.abs(deltaGamma), GYRO_ACCELERATION_FACTOR);
-          targetY = -moveY * GYRO_SENSITIVITY;
-          targetX = moveX * GYRO_SENSITIVITY;
-          if (!animating) requestAnimationFrame(animateCard);
-      };
-      
-      document.body.addEventListener('mousemove', e => {
-          if (usingGyro || isCursorInside) return;
-          const rect = card.getBoundingClientRect();
-          targetX = (e.clientX - rect.left - rect.width / 2) * MOUSE_SENSITIVITY;
-          targetY = -(e.clientY - rect.top - rect.height / 2) * MOUSE_SENSITIVITY;
-          if (!animating) requestAnimationFrame(animateCard);
-      });
-      
-      card.addEventListener('mouseenter', () => {
+    card.addEventListener('mouseenter', () => {
         if (usingGyro) return;
         isCursorInside = true;
         targetX = 0;
         targetY = 0;
         if (!animating) requestAnimationFrame(animateCard);
-      });
-      
-      card.addEventListener('mouseleave', (e) => {
+    });
+
+    card.addEventListener('mouseleave', (e) => {
         if (usingGyro) return;
         isCursorInside = false;
         const rect = card.getBoundingClientRect();
         targetX = (e.clientX - rect.left - rect.width / 2) * MOUSE_SENSITIVITY;
         targetY = -(e.clientY - rect.top - rect.height / 2) * MOUSE_SENSITIVITY;
         if (!animating) requestAnimationFrame(animateCard);
-      });
-      
-      function animateCard() {
-          animating = true;
-          currentX += (targetX - currentX) * 0.1;
-          currentY += (targetY - currentY) * 0.1;
-          card.style.transform = `rotateY(${currentX}deg) rotateX(${currentY}deg)`;
-          if (shadow) {
-              shadow.style.left = `calc(50% + ${-currentX * 4}px)`;
-              shadow.style.opacity = `${0.7 - Math.abs(currentY/50)}`;
-          }
-          if (Math.abs(currentX - targetX) > 0.01 || Math.abs(currentY - targetY) > 0.01) {
-              requestAnimationFrame(animateCard);
-          } else {
-              animating = false;
-          }
-      }
-      animateCard();
-      
-      function startGyro() {
-          if (motionHandler.listener) {
-              usingGyro = true;
-              window.addEventListener('deviceorientation', motionHandler.listener, true);
-          }
-      }
-      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission !== 'function') {
-          startGyro();
-      }
-  }
+    });
 
-  function requestMotionPermission() {
-      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-          DeviceOrientationEvent.requestPermission()
-              .then(permissionState => {
-                  if (permissionState === 'granted') {
-                      if (motionHandler.listener) {
-                          document.querySelectorAll('.login-3d-box').forEach(card => {
-                              const controller = card.motionController;
-                              if(controller) controller.usingGyro = true;
-                          });
-                          window.addEventListener('deviceorientation', motionHandler.listener, true);
-                      }
-                  }
-              })
-              .catch(console.error);
-      }
-  }
-  window.addEventListener('click', requestMotionPermission, { once: true });
-  setup3d('#signupCard', '.room-shadow');
-  setup3d('#loginCard', '.room-shadow');
-
-  //-- FIREBASE CONFIG --
-  const firebaseConfig = {
-      apiKey: "AIzaSyC9rehsf-0jkb9dAeT1-0Z1C-yRJ0YI9dA",
-      authDomain: "gymnm-ce84b.firebaseapp.com",
-      projectId: "gymnm-ce84b",
-      storageBucket: "gymnm-ce84b.appspot.com",
-      messagingSenderId: "474926929394",
-      appId: "1:474926929394:web:6abdb807caba2751a5c76b",
-      measurementId: "G-6R9S8LYZNF"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
-
-  // --- LOGIN/SIGNUP LOGIC ---
-  const signupUser = document.getElementById('signupUser');
-  const signupPass = document.getElementById('signupPass');
-  const signupDOB = document.getElementById('signupDOB');
-  const signupBtn = document.getElementById('signupBtn');
-  const signupMsg = document.getElementById('signupMsg');
-  const googleConnectBtn = document.getElementById('googleConnectBtn');
-  const googleAccountInfo = document.getElementById('googleAccountInfo');
-  const googleUserPic = document.getElementById('googleUserPic');
-  const googleUserName = document.getElementById('googleUserName');
-  const googleUserEmail = document.getElementById('googleUserEmail');
-  let googleUser = null;
-
-  async function imageUrlToBase64(url) {
-    try {
-      const response = await fetch(url);
-      const blob = await response.blob();
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-    } catch (error) {
-      console.error("Error converting image to Base64:", error);
-      return null;
+    function animateCard() {
+        animating = true;
+        currentX += (targetX - currentX) * 0.1;
+        currentY += (targetY - currentY) * 0.1;
+        card.style.transform = `rotateY(${currentX}deg) rotateX(${currentY}deg)`;
+        
+        if (shadow) {
+            shadow.style.left = `calc(50% + ${-currentX * 4}px)`;
+            shadow.style.opacity = `${0.7 - Math.abs(currentY / 50)}`;
+        }
+        
+        if (Math.abs(currentX - targetX) > 0.01 || Math.abs(currentY - targetY) > 0.01) {
+            requestAnimationFrame(animateCard);
+        } else {
+            animating = false;
+        }
     }
-  }
-  
-  function generateRandomChars(length) {
-    const characters = 'abcdefghijklmnopqrstuvwxyz';
-    let result = '';
-    for (let i = 0; i < length; i++) {
-      result += characters.charAt(Math.floor(Math.random() * characters.length));
-    }
-    return result;
-  }
-  
-  function isAgeBetween7And21(dobStr) {
-    if (!dobStr) return false;
-    const dob = new Date(dobStr);
-    const today = new Date();
-    if (dob > today) return false;
-    let age = today.getFullYear() - dob.getFullYear();
-    const m = today.getMonth() - dob.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
-    return age >= 7 && age <= 21;
-  }
+    animateCard();
 
-  function checkSignupFields() {
+    function startGyro() {
+        if (motionHandler.listener) {
+            usingGyro = true;
+            window.addEventListener('deviceorientation', motionHandler.listener, true);
+        }
+    }
+
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission !== 'function') {
+        startGyro();
+    }
+}
+
+function requestMotionPermission() {
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission()
+            .then(permissionState => {
+                if (permissionState === 'granted') {
+                    if (motionHandler.listener) {
+                        // Assuming .login-3d-box is the class for cards
+                        document.querySelectorAll('.login-3d-box').forEach(card => {
+                             // Logic to set gyro flag if controllers were stored on element
+                             // kept simple based on original code
+                        });
+                        window.addEventListener('deviceorientation', motionHandler.listener, true);
+                    }
+                }
+            })
+            .catch(console.error);
+    }
+}
+window.addEventListener('click', requestMotionPermission, { once: true });
+
+// Initialize 3D Effect
+setup3d('#signupCard', '.room-shadow');
+setup3d('#loginCard', '.room-shadow');
+
+/**
+ * ==========================================
+ * 6. UI HANDLERS (Switching Cards, Popups)
+ * ==========================================
+ */
+const signupCard = document.getElementById('signupCard');
+const loginCard = document.getElementById('loginCard');
+const toLoginBtn = document.getElementById('toLogin');
+const toSignupBtn = document.getElementById('toSignup');
+const popup = document.getElementById('profilePopup');
+const popupCloseBtn = document.getElementById('popupCloseBtn');
+const logoImgs = document.querySelectorAll('.login-3d-logo');
+
+if (toLoginBtn) {
+    toLoginBtn.onclick = () => {
+        signupCard.classList.add('hide');
+        loginCard.classList.remove('hide');
+    };
+}
+
+if (toSignupBtn) {
+    toSignupBtn.onclick = () => {
+        loginCard.classList.add('hide');
+        signupCard.classList.remove('hide');
+    };
+}
+
+// Popup Logic
+logoImgs.forEach(logo => {
+    logo.addEventListener('click', () => {
+        if (popup) popup.classList.toggle('open');
+    });
+});
+
+if (popupCloseBtn) {
+    popupCloseBtn.addEventListener('click', () => popup.classList.remove('open'));
+}
+
+if (popup) {
+    popup.addEventListener('click', e => {
+        if (e.target === popup) popup.classList.remove('open');
+    });
+}
+
+/**
+ * ==========================================
+ * 7. AUTHENTICATION LOGIC (Signup & Google)
+ * ==========================================
+ */
+
+// DOM Elements
+const signupUser = document.getElementById('signupUser');
+const signupPass = document.getElementById('signupPass');
+const signupDOB = document.getElementById('signupDOB');
+const signupBtn = document.getElementById('signupBtn');
+const signupMsg = document.getElementById('signupMsg');
+
+const googleConnectBtn = document.getElementById('googleConnectBtn');
+const googleAccountInfo = document.getElementById('googleAccountInfo');
+const googleUserPic = document.getElementById('googleUserPic');
+const googleUserName = document.getElementById('googleUserName');
+const googleUserEmail = document.getElementById('googleUserEmail');
+
+// State
+let googleUser = null;
+let isGoogleSigningIn = false; 
+
+// --- Validation Logic ---
+function checkSignupFields() {
+    if (!signupUser || !signupPass || !signupDOB) return;
+
     const isUserFilled = signupUser.value.trim().length > 0;
     const isPassFilled = signupPass.value.length >= 6;
     const isDOBFilled = signupDOB.value;
     const isValidAge = isAgeBetween7And21(signupDOB.value);
     const isGoogleConnected = googleUser !== null;
-    
+
     const allConditionsMet = isUserFilled && isPassFilled && isDOBFilled && isValidAge && isGoogleConnected;
-    signupBtn.disabled = !allConditionsMet;
     
+    if (signupBtn) signupBtn.disabled = !allConditionsMet;
+
     if (isDOBFilled && !isValidAge) {
-      signupMsg.textContent = "Age must be between 7 and 21.";
+        signupMsg.textContent = "Age must be between 7 and 21.";
     } else if (!allConditionsMet) {
-      signupMsg.textContent = "Please fill all fields and connect Google.";
+        signupMsg.textContent = "Please fill all fields and connect Google.";
     } else {
-      signupMsg.textContent = "Ready to Sign Up!";
+        signupMsg.textContent = "Ready to Sign Up!";
     }
-  }
-  signupUser.oninput = signupPass.oninput = signupDOB.oninput = checkSignupFields;
+}
 
-  async function connectGoogle() {
+// Attach Listeners to Inputs
+if (signupUser) signupUser.oninput = checkSignupFields;
+if (signupPass) signupPass.oninput = checkSignupFields;
+if (signupDOB) signupDOB.oninput = checkSignupFields;
+
+// --- Google Connect Logic ---
+async function connectGoogle() {
+    if (isGoogleSigningIn) return;
+    isGoogleSigningIn = true;
+
     const provider = new firebase.auth.GoogleAuthProvider();
-    try {
-      const result = await firebase.auth().signInWithPopup(provider);
-      googleUser = result.user;
-      googleUserPic.src = googleUser.photoURL || 'https://cdn-icons-png.flaticon.com/512/3135/3135755.png';
-      googleUserName.textContent = googleUser.displayName || "Google User";
-      googleUserEmail.textContent = googleUser.email || "No email provided";
-      googleConnectBtn.classList.add('hide');
-      googleAccountInfo.classList.remove('hide');
-      checkSignupFields();
-    } catch (err) {
-      signupMsg.textContent = "Google connect error: " + err.message;
-    }
-  }
-  googleConnectBtn.onclick = connectGoogle;
-  googleAccountInfo.onclick = connectGoogle;
+    provider.setCustomParameters({ prompt: "select_account" });
 
-  signupBtn.onclick = async function() {
-    if (signupBtn.disabled) return;
-    signupBtn.disabled = true;
-    signupMsg.textContent = "Verifying Google Account...";
-    
-    const usersRef = db.collection('users');
-    const snapshot = await usersRef.where('googleEmail', '==', googleUser.email).get();
-    
-    if (!snapshot.empty) {
-      signupMsg.textContent = "An account already exists with this Google account. Please log in.";
-      signupBtn.disabled = false;
-      return;
-    }
-    
-    signupMsg.textContent = "Creating your account...";
-    const dob = new Date(signupDOB.value);
-    const day = String(dob.getDate()).padStart(2, '0');
-    const month = String(dob.getMonth() + 1).padStart(2, '0');
-    const baseUsername = signupUser.value.trim().replace(/\s+/g, '');
-    const randomChars = generateRandomChars(4);
-    const newUserId = `${baseUsername}${day}${month}${randomChars}`;
-    
-    const imgBase64 = await imageUrlToBase64(googleUser.photoURL);
-    const userData = {
-      userId: newUserId,
-      username: signupUser.value.trim(),
-      dob: signupDOB.value,
-      password: signupPass.value,
-      img: imgBase64,
-      googleEmail: googleUser.email,
-      googleName: googleUser.displayName
-    };
-    
-    try {
-      await db.collection('users').doc(newUserId).set(userData);
-      localStorage.setItem('user_' + newUserId, JSON.stringify(userData));
-      localStorage.setItem('last_logged_in_user', newUserId);
-      signupMsg.innerHTML = `Success! Your User ID is: <b>${newUserId}</b><br>Redirecting...`;
-      
-      // FIX: Redirect to main.html
-      setTimeout(() => {
-        window.location.href = `main.html?user=${encodeURIComponent(newUserId)}`;
-      }, 2500);
-    } catch (err) {
-      signupMsg.textContent = "Firebase error: " + err.message;
-      signupBtn.disabled = false;
-    }
-  };
+    signupMsg.textContent = "Opening Google...";
 
-  const loginBtn = document.getElementById('loginBtn');
-  const loginMsg = document.getElementById('loginMsg');
-  const loginUser = document.getElementById('loginUser');
-  const loginPass = document.getElementById('loginPass');
-  const googleLoginBtnLogin = document.getElementById('googleLoginBtnLogin');
-
-  loginBtn.onclick = async function() {
-    if (!loginUser.value || !loginPass.value) {
-      loginMsg.textContent = "Please enter User ID and password.";
-      return;
-    }
-    loginBtn.disabled = true;
-    loginMsg.textContent = "Logging in...";
-    const userId = loginUser.value.trim();
-    
     try {
-      const doc = await db.collection('users').doc(userId).get();
-      if (doc.exists) {
-        const user = doc.data();
-        if (user.password === loginPass.value) {
-          localStorage.setItem('last_logged_in_user', userId);
-          localStorage.setItem('user_' + userId, JSON.stringify(user));
-          loginMsg.textContent = "Success! Redirecting...";
-          
-          // FIX: Redirect to main.html
-          window.location.href = `main.html?user=${encodeURIComponent(userId)}`;
-        } else {
-          loginMsg.textContent = "Wrong password.";
-          loginBtn.disabled = false;
+        const result = await firebase.auth().signInWithPopup(provider);
+        googleUser = result.user;
+
+        // Check if Google email is already used
+        const usersRef = db.collection('users');
+        const snapshot = await usersRef.where("googleEmail", "==", googleUser.email).get();
+
+        if (!snapshot.empty) {
+            signupMsg.innerHTML = "⚠️ This Google account already has an account.<br>Please login.";
+            googleConnectBtn.classList.add("hide");
+            return;
         }
-      } else {
-        loginMsg.textContent = "User ID not found.";
-        loginBtn.disabled = false;
-      }
+
+        // Update UI
+        googleUserPic.src = googleUser.photoURL || "https://cdn-icons-png.flaticon.com/512/3135/3135755.png";
+        googleUserName.textContent = googleUser.displayName || "Google User";
+        googleUserEmail.textContent = googleUser.email || "No email provided";
+
+        googleConnectBtn.classList.add("hide");
+        googleAccountInfo.classList.remove("hide");
+
+        signupMsg.textContent = "Google Account Connected ✔";
+        checkSignupFields();
+
     } catch (err) {
-      loginMsg.textContent = "Firebase error: " + err.message;
-      loginBtn.disabled = false;
+        console.error(err);
+        signupMsg.textContent = "Google login error: " + err.message;
+    } finally {
+        isGoogleSigningIn = false;
     }
-  };
+}
 
-  googleLoginBtnLogin.onclick = async function() {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    loginMsg.textContent = "Connecting to Google...";
-    try {
-      const result = await firebase.auth().signInWithPopup(provider);
-      const email = result.user.email;
-      loginMsg.textContent = "Finding your account...";
-      
-      const snapshot = await db.collection('users').where('googleEmail', '==', email).limit(1).get();
-      if (snapshot.empty) {
-        loginMsg.textContent = "No account found with this Google email. Please sign up.";
-        return;
-      }
-      
-      const userDoc = snapshot.docs[0];
-      const userData = userDoc.data();
-      const userId = userData.userId;
-      localStorage.setItem('last_logged_in_user', userId);
-      localStorage.setItem('user_' + userId, JSON.stringify(userData));
-      loginMsg.textContent = "Welcome back! Redirecting...";
-      
-      // FIX: Redirect to main.html
-      window.location.href = `main.html?user=${encodeURIComponent(userId)}`;
-    } catch (err) {
-      loginMsg.textContent = "Google login error: " + err.message;
-    }
-  };
+if (googleConnectBtn) {
+    googleConnectBtn.onclick = connectGoogle;
+}
 
-  // --- OFFLINE DETECTION LOGIC ---
-  const offlineIndicator = document.getElementById('offline-indicator');
+// NOTE: The listener for googleAccountInfo.onclick is intentionally NOT added 
+// to prevent the double-popup error.
 
-  function handleConnectionChange() {
-      if (navigator.onLine) {
-          // If we are online, hide the indicator
-          offlineIndicator.classList.remove('visible');
-      } else {
-          // If we are offline, show the indicator
-          offlineIndicator.classList.add('visible');
-      }
-  }
+// --- Final Signup Logic ---
+if (signupBtn) {
+    signupBtn.onclick = async function() {
+        if (signupBtn.disabled) return;
 
-  // Listen for connection status changes
-  window.addEventListener('online', handleConnectionChange);
-  window.addEventListener('offline', handleConnectionChange);
+        signupBtn.disabled = true;
+        signupMsg.textContent = "Verifying Google Account...";
 
-  // Check the initial status when the page loads
-  handleConnectionChange();
+        try {
+            // Double check if user exists before writing
+            const usersRef = db.collection('users');
+            const snapshot = await usersRef.where('googleEmail', '==', googleUser.email).get();
 
+            if (!snapshot.empty) {
+                signupMsg.textContent = "⚠️ Google account already exists. Please login.";
+                signupBtn.disabled = false;
+                return;
+            }
+
+            signupMsg.textContent = "Creating your account...";
+
+            const dob = new Date(signupDOB.value);
+            const day = String(dob.getDate()).padStart(2, '0');
+            const month = String(dob.getMonth() + 1).padStart(2, '0');
+            const baseUsername = signupUser.value.trim().replace(/\s+/g, '');
+            const randomChars = generateRandomChars(4);
+            const newUserId = `${baseUsername}${day}${month}${randomChars}`;
+
+            // Attempt to convert image
+            let imgBase64 = null;
+            if (googleUser.photoURL) {
+                imgBase64 = await imageUrlToBase64(googleUser.photoURL);
+            }
+
+            const userData = {
+                userId: newUserId,
+                username: signupUser.value.trim(),
+                dob: signupDOB.value,
+                password: signupPass.value,
+                img: imgBase64, // might be null if CORS failed, which is safer than crashing
+                googleEmail: googleUser.email,
+                googleName: googleUser.displayName
+            };
+
+            // Write to Firestore
+            await db.collection('users').doc(newUserId).set(userData);
+            
+            // Save local session
+            localStorage.setItem('user_' + newUserId, JSON.stringify(userData));
+            localStorage.setItem('last_logged_in_user', newUserId);
+
+            signupMsg.innerHTML = `Success! Your User ID is: <b>${newUserId}</b><br>Redirecting...`;
+
+            setTimeout(() => {
+    console.log("Redirecting to main.html");
+    window.location.replace(`main.html?user=${encodeURIComponent(newUserId)}`);
+}, 1000);
+
+        } catch (err) {
+            console.error(err);
+            signupMsg.textContent = "Firebase error: " + err.message;
+            signupBtn.disabled = false;
+        }
+    };
+}
 </script>
 </body>
 </html>
