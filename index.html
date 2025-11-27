@@ -326,8 +326,14 @@
   </div>
 <script>
 const lastUser = localStorage.getItem("last_logged_in_user");
-if (lastUser && lastUser !== "null" && lastUser !== "undefined") {
+
+if (lastUser) {
+  const userData = localStorage.getItem("user_" + lastUser);
+  
+  // redirect ONLY if user exists in localStorage
+  if (userData) {
     window.location.replace(`main.html?user=${encodeURIComponent(lastUser)}`);
+  }
 }
 </script>
 <script>
