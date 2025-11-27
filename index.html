@@ -331,6 +331,7 @@ if (lastUser && lastUser !== "null" && lastUser !== "undefined") {
 }
 </script>
 <script>
+
   /**
  * ==========================================
  * 1. FIREBASE CONFIGURATION & INITIALIZATION
@@ -395,8 +396,6 @@ function isAgeBetween7And21(dobStr) {
 // Image to Base64 Converter (with Error Handling)
 async function imageUrlToBase64(url) {
     try {
-        // Note: Fetching external images may fail due to CORS. 
-        // If it fails, we return null to allow signup to proceed without the image.
         const response = await fetch(url);
         const blob = await response.blob();
         return new Promise((resolve, reject) => {
@@ -407,7 +406,7 @@ async function imageUrlToBase64(url) {
         });
     } catch (error) {
         console.warn("Could not convert Google image (likely CORS):", error);
-        return null; // Return null so the account is still created
+        return null; 
     }
 }
 
@@ -416,6 +415,8 @@ async function imageUrlToBase64(url) {
  * 3. AUTO-REDIRECT LOGIC
  * ==========================================
  */
+
+// Your existing redirect logic is outside this block but is fine.
 
 /**
  * ==========================================
@@ -597,10 +598,8 @@ function requestMotionPermission() {
             .then(permissionState => {
                 if (permissionState === 'granted') {
                     if (motionHandler.listener) {
-                        // Assuming .login-3d-box is the class for cards
                         document.querySelectorAll('.login-3d-box').forEach(card => {
-                             // Logic to set gyro flag if controllers were stored on element
-                             // kept simple based on original code
+                             // This part is fine for now
                         });
                         window.addEventListener('deviceorientation', motionHandler.listener, true);
                     }
@@ -630,6 +629,8 @@ const logoImgs = document.querySelectorAll('.login-3d-logo');
 
 if (toLoginBtn) {
     toLoginBtn.onclick = () => {
+        // Clear login card messages on switch
+        loginMsg.textContent = "";
         signupCard.classList.add('hide');
         loginCard.classList.remove('hide');
     };
@@ -637,6 +638,8 @@ if (toLoginBtn) {
 
 if (toSignupBtn) {
     toSignupBtn.onclick = () => {
+        // Clear signup card messages on switch
+        signupMsg.textContent = "Please fill all fields and connect Google.";
         loginCard.classList.add('hide');
         signupCard.classList.remove('hide');
     };
@@ -661,11 +664,11 @@ if (popup) {
 
 /**
  * ==========================================
- * 7. AUTHENTICATION LOGIC (Signup & Google)
+ * 7. AUTHENTICATION LOGIC (Signup & Login)
  * ==========================================
  */
 
-// DOM Elements
+// --- Signup Elements ---
 const signupUser = document.getElementById('signupUser');
 const signupPass = document.getElementById('signupPass');
 const signupDOB = document.getElementById('signupDOB');
@@ -678,11 +681,19 @@ const googleUserPic = document.getElementById('googleUserPic');
 const googleUserName = document.getElementById('googleUserName');
 const googleUserEmail = document.getElementById('googleUserEmail');
 
-// State
+// --- Login Elements ---
+const loginUser = document.getElementById('loginUser');
+const loginPass = document.getElementById('loginPass');
+const loginBtn = document.getElementById('loginBtn');
+const loginMsg = document.getElementById('loginMsg');
+const googleLoginBtnLogin = document.getElementById('googleLoginBtnLogin');
+
+
+// --- State ---
 let googleUser = null;
 let isGoogleSigningIn = false; 
 
-// --- Validation Logic ---
+// --- Validation Logic (Signup) ---
 function checkSignupFields() {
     if (!signupUser || !signupPass || !signupDOB) return;
 
@@ -710,34 +721,43 @@ if (signupUser) signupUser.oninput = checkSignupFields;
 if (signupPass) signupPass.oninput = checkSignupFields;
 if (signupDOB) signupDOB.oninput = checkSignupFields;
 
-// --- Google Connect Logic ---
-async function connectGoogle() {
+
+// --- Google Connect Logic (Signup) ---
+async function connectGoogle(promptForAccount = false) {
     if (isGoogleSigningIn) return;
     isGoogleSigningIn = true;
 
     const provider = new firebase.auth.GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: "select_account" });
+    // Use select_account to force the user to pick an account (or re-pick)
+    if (promptForAccount) {
+        provider.setCustomParameters({ prompt: "select_account" });
+    }
 
     signupMsg.textContent = "Opening Google...";
 
     try {
         const result = await firebase.auth().signInWithPopup(provider);
-        googleUser = result.user;
+        const user = result.user;
 
-        // Check if Google email is already used
+        // Check if Google email is already used in Firestore
         const usersRef = db.collection('users');
-        const snapshot = await usersRef.where("googleEmail", "==", googleUser.email).get();
+        const snapshot = await usersRef.where("googleEmail", "==", user.email).get();
 
         if (!snapshot.empty) {
             signupMsg.innerHTML = "⚠️ This Google account already has an account.<br>Please login.";
-            googleConnectBtn.classList.add("hide");
+            googleConnectBtn.classList.remove("hide");
+            googleAccountInfo.classList.add("hide");
+            googleUser = null;
+            checkSignupFields();
             return;
         }
+        
+        googleUser = user;
 
         // Update UI
-        googleUserPic.src = googleUser.photoURL || "https://cdn-icons-png.flaticon.com/512/3135/3135755.png";
-        googleUserName.textContent = googleUser.displayName || "Google User";
-        googleUserEmail.textContent = googleUser.email || "No email provided";
+        googleUserPic.src = user.photoURL || "https://cdn-icons-png.flaticon.com/512/3135/3135755.png";
+        googleUserName.textContent = user.displayName || "Google User";
+        googleUserEmail.textContent = user.email || "No email provided";
 
         googleConnectBtn.classList.add("hide");
         googleAccountInfo.classList.remove("hide");
@@ -747,40 +767,32 @@ async function connectGoogle() {
 
     } catch (err) {
         console.error(err);
-        signupMsg.textContent = "Google login error: " + err.message;
+        // User closed the popup or other error
+        signupMsg.textContent = "Google connection failed.";
     } finally {
         isGoogleSigningIn = false;
     }
 }
 
 if (googleConnectBtn) {
-    googleConnectBtn.onclick = connectGoogle;
+    googleConnectBtn.onclick = () => connectGoogle(true);
 }
 
-// NOTE: The listener for googleAccountInfo.onclick is intentionally NOT added 
-// to prevent the double-popup error.
+// *** ADDED: Logic to re-select Google account by clicking the picked card ***
+if (googleAccountInfo) {
+    googleAccountInfo.onclick = () => connectGoogle(true); // Forces re-selection
+}
+
 
 // --- Final Signup Logic ---
 if (signupBtn) {
     signupBtn.onclick = async function() {
-        if (signupBtn.disabled) return;
+        if (signupBtn.disabled || !googleUser) return;
 
         signupBtn.disabled = true;
-        signupMsg.textContent = "Verifying Google Account...";
+        signupMsg.textContent = "Creating your account...";
 
         try {
-            // Double check if user exists before writing
-            const usersRef = db.collection('users');
-            const snapshot = await usersRef.where('googleEmail', '==', googleUser.email).get();
-
-            if (!snapshot.empty) {
-                signupMsg.textContent = "⚠️ Google account already exists. Please login.";
-                signupBtn.disabled = false;
-                return;
-            }
-
-            signupMsg.textContent = "Creating your account...";
-
             const dob = new Date(signupDOB.value);
             const day = String(dob.getDate()).padStart(2, '0');
             const month = String(dob.getMonth() + 1).padStart(2, '0');
@@ -799,32 +811,153 @@ if (signupBtn) {
                 username: signupUser.value.trim(),
                 dob: signupDOB.value,
                 password: signupPass.value,
-                img: imgBase64, // might be null if CORS failed, which is safer than crashing
+                img: imgBase64, 
                 googleEmail: googleUser.email,
                 googleName: googleUser.displayName
             };
+
+            // Check if userId is already taken (unlikely with the random component, but good practice)
+            const userCheck = await db.collection('users').doc(newUserId).get();
+            if (userCheck.exists) {
+                // If it exists, you'd need a robust way to generate a new unique ID, 
+                // but for this example, we assume the random part makes it unique enough.
+                signupMsg.textContent = "User ID generation error. Try again.";
+                signupBtn.disabled = false;
+                return;
+            }
 
             // Write to Firestore
             await db.collection('users').doc(newUserId).set(userData);
             
             // Save local session
-            localStorage.setItem('user_' + newUserId, JSON.stringify(userData));
             localStorage.setItem('last_logged_in_user', newUserId);
 
             signupMsg.innerHTML = `Success! Your User ID is: <b>${newUserId}</b><br>Redirecting...`;
 
             setTimeout(() => {
-    console.log("Redirecting to main.html");
-    window.location.replace(`main.html?user=${encodeURIComponent(newUserId)}`);
-}, 1000);
+                window.location.replace(`main.html?user=${encodeURIComponent(newUserId)}`);
+            }, 1000);
 
         } catch (err) {
             console.error(err);
-            signupMsg.textContent = "Firebase error: " + err.message;
+            signupMsg.textContent = "Signup error: " + err.message;
             signupBtn.disabled = false;
         }
     };
 }
+
+
+// --- LOGIN LOGIC IMPLEMENTATION ---
+
+// 1. Traditional Login Handler
+if (loginBtn) {
+    loginBtn.onclick = async function() {
+        const userId = loginUser.value.trim();
+        const password = loginPass.value;
+
+        if (!userId || !password) {
+            loginMsg.textContent = "Please enter both User ID and Password.";
+            return;
+        }
+
+        loginBtn.disabled = true;
+        loginMsg.textContent = "Logging in...";
+
+        try {
+            // Check if user exists in Firestore
+            const userDoc = await db.collection('users').doc(userId).get();
+
+            if (!userDoc.exists) {
+                loginMsg.textContent = "⚠️ User not found. Please check your User ID.";
+                loginUser.classList.add('input-error');
+                loginBtn.disabled = false;
+                return;
+            }
+
+            const userData = userDoc.data();
+
+            // Check password
+            if (userData.password !== password) {
+                loginMsg.textContent = "⚠️ Wrong password. Please try again.";
+                loginPass.classList.add('input-error');
+                loginBtn.disabled = false;
+                return;
+            }
+
+            // Success
+            localStorage.setItem('last_logged_in_user', userId);
+            loginMsg.textContent = "Login successful. Redirecting...";
+
+            setTimeout(() => {
+                window.location.replace(`main.html?user=${encodeURIComponent(userId)}`);
+            }, 500);
+
+        } catch (err) {
+            console.error(err);
+            loginMsg.textContent = "Login error: " + err.message;
+            loginBtn.disabled = false;
+        } finally {
+            loginBtn.disabled = false;
+            loginUser.classList.remove('input-error');
+            loginPass.classList.remove('input-error');
+        }
+    };
+}
+
+
+// 2. Google Login on Login Card Handler
+if (googleLoginBtnLogin) {
+    googleLoginBtnLogin.onclick = async function() {
+        if (isGoogleSigningIn) return;
+        isGoogleSigningIn = true;
+        loginMsg.textContent = "Opening Google Sign-in...";
+        googleLoginBtnLogin.disabled = true;
+
+        const provider = new firebase.auth.GoogleAuthProvider();
+        
+        try {
+            const result = await firebase.auth().signInWithPopup(provider);
+            const user = result.user;
+
+            // Check if the Google email is linked to an account in Firestore
+            const usersRef = db.collection('users');
+            const snapshot = await usersRef.where("googleEmail", "==", user.email).get();
+
+            if (snapshot.empty) {
+                // Account not found via Google email
+                loginMsg.innerHTML = "⚠️ No account found linked to this Google email.<br>Please sign up first.";
+                googleLoginBtnLogin.disabled = false;
+                return;
+            }
+            
+            // Account found! Log them in.
+            const userData = snapshot.docs[0].data();
+            const userId = userData.userId;
+
+            localStorage.setItem('last_logged_in_user', userId);
+            loginMsg.textContent = "Google Login successful. Redirecting...";
+
+            setTimeout(() => {
+                window.location.replace(`main.html?user=${encodeURIComponent(userId)}`);
+            }, 500);
+
+        } catch (err) {
+            console.error(err);
+            loginMsg.textContent = "Google login error: " + err.message;
+        } finally {
+            isGoogleSigningIn = false;
+            googleLoginBtnLogin.disabled = false;
+        }
+    };
+}
+
+// Clear error state on input
+if (loginUser) loginUser.oninput = () => loginUser.classList.remove('input-error');
+if (loginPass) loginPass.oninput = () => loginPass.classList.remove('input-error');
+
+
+
+
 </script>
 </body>
 </html>
