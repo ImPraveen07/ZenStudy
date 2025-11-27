@@ -1,4 +1,3 @@
-<!-- 📄 FILE: main.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,18 +11,42 @@
       background: linear-gradient(to right, #6366f1, #818cf8);
       color: white;
       text-align: center;
-      padding-top: 80px;
+      padding-top: 100px;
       margin: 0;
     }
 
+    /* ----- TOP-RIGHT EMERGENCY LOGOUT ----- */
+    #emergencyLogout {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      background: white;
+      color: #6366f1;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 0.95em;
+      font-weight: bold;
+      box-shadow: 0 0 8px rgba(0,0,0,0.25);
+      z-index: 9999;
+      transition: 0.2s;
+    }
+    #emergencyLogout:hover {
+      transform: scale(1.06);
+      background: #f3f3f3;
+    }
+
+    /* ----- USER CARD ----- */
     #userInfo {
-      background: rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.18);
       border-radius: 18px;
       display: inline-block;
       padding: 30px 40px;
-      backdrop-filter: blur(6px);
-      box-shadow: 0 0 20px rgba(255,255,255,0.15);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 0 20px rgba(255,255,255,0.2);
       animation: fadeIn 0.6s ease;
+      color: white;
     }
 
     @keyframes fadeIn {
@@ -33,15 +56,20 @@
 
     img {
       border-radius: 50%;
-      width: 120px;
-      height: 120px;
+      width: 140px;
+      height: 140px;
       margin-bottom: 20px;
       border: 4px solid white;
+      object-fit: cover;
+    }
+
+    h1 {
+      margin-top: 0;
     }
 
     p {
       font-size: 1.1em;
-      margin: 6px 0;
+      margin: 8px 0;
     }
 
     .logout-btn {
@@ -56,88 +84,77 @@
       font-size: 1.05em;
       transition: 0.2s;
     }
-
     .logout-btn:hover {
       transform: scale(1.07);
       color: #4f46e5;
     }
+
   </style>
 </head>
 <body>
 
-  <div id="userInfo"></div>
+  <!-- Always Visible Emergency Logout -->
+  <button id="emergencyLogout" onclick="forceLogout()">Logout</button>
+
+  <!-- Main User Info Box -->
+  <div id="userInfo">Loading...</div>
 
   <script>
-    /* FAST REDIRECT FUNCTION */
-    function safeRedirect() {
+
+    /* ------------------------ LOGOUT FUNCTION ------------------------ */
+    function forceLogout() {
+      localStorage.removeItem("last_logged_in_user");  // IMPORTANT
       window.location.replace("index.html");
     }
 
-    /* Backup redirect after 1 second (failsafe) */
-    setTimeout(() => safeRedirect(), 1200);
-
-    /* Read URL param */
+    /* ------------------------ URL PARAM HANDLER ---------------------- */
     function getQueryParam(param) {
       try {
-        const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get(param);
+        const url = new URLSearchParams(window.location.search);
+        return url.get(param);
       } catch (e) {
-        safeRedirect();
+        return null;
       }
     }
 
-    /* Validate user param */
     const userId = getQueryParam("user");
+
+    // If no user ID → go to login
     if (!userId || userId === "null" || userId === "undefined" || userId.trim() === "") {
-      safeRedirect();
+      forceLogout();
     }
 
-    /* Validate stored user data */
-    let userDataStr = null;
-    try {
-      userDataStr = localStorage.getItem("user_" + userId);
-    } catch (e) {
-      safeRedirect();
+    /* ------------------------ READ USER FROM LOCAL STORAGE ------------------------ */
+    const stored = localStorage.getItem("user_" + userId);
+    if (!stored) {
+      forceLogout();
     }
 
-    if (!userDataStr || userDataStr === "null" || userDataStr === "undefined") {
-      safeRedirect();
-    }
-
-    /* Parse JSON safely */
     let user = null;
     try {
-      user = JSON.parse(userDataStr);
+      user = JSON.parse(stored);
     } catch (e) {
-      safeRedirect();
+      forceLogout();
     }
 
-    /* Extra validation */
-    if (!user || !user.username || !user.password) {
-      safeRedirect();
+    if (!user || !user.username) {
+      forceLogout();
     }
 
-    /* If all good → show user info */
+    /* ------------------------ DISPLAY USER DATA ------------------------ */
     document.getElementById("userInfo").innerHTML = `
       <h1>Welcome, ${user.username} 👋</h1>
 
-      <img src="${user.img || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'}" alt="Profile">
+      <img src="${user.img || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'}">
 
       <p><b>User ID:</b> ${user.userId}</p>
       <p><b>Password:</b> ${user.password}</p>
       <p><b>Email:</b> ${user.googleEmail}</p>
-      <p><b>DOB:</b> ${user.dob}</p>
+      <p><b>Date of Birth:</b> ${user.dob}</p>
 
-      <button class="logout-btn" onclick="logout()">Logout</button>
+      <button class="logout-btn" onclick="forceLogout()">Logout</button>
     `;
 
-    /* Logout */
-    function logout() {
-      try {
-        localStorage.removeItem("last_logged_in_user");
-      } catch (e) {}
-      safeRedirect();
-    }
   </script>
 
 </body>
