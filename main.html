@@ -61,67 +61,82 @@
       transform: scale(1.07);
       color: #4f46e5;
     }
-
-    .error {
-      background: rgba(255, 255, 255, 0.15);
-      padding: 20px;
-      display: inline-block;
-      border-radius: 10px;
-      font-weight: bold;
-      backdrop-filter: blur(6px);
-      box-shadow: 0 0 20px rgba(255,255,255,0.15);
-    }
   </style>
 </head>
 <body>
 
   <div id="userInfo"></div>
-  <div id="errorMsg" class="error" style="display:none;"></div>
 
   <script>
-    // Helper: read value from URL
-    function getQueryParam(param) {
-      const urlParams = new URLSearchParams(window.location.search);
-      return urlParams.get(param);
+    /* FAST REDIRECT FUNCTION */
+    function safeRedirect() {
+      window.location.replace("index.html");
     }
 
-    const userId = getQueryParam("user");
-    const userDiv = document.getElementById("userInfo");
-    const errorDiv = document.getElementById("errorMsg");
+    /* Backup redirect after 1 second (failsafe) */
+    setTimeout(() => safeRedirect(), 1200);
 
-    if (!userId) {
-      errorDiv.textContent = "❌ No User ID in URL. Please login again.";
-      errorDiv.style.display = "block";
-    } else {
-      const userDataStr = localStorage.getItem("user_" + userId);
-
-      if (!userDataStr) {
-        errorDiv.textContent = "❌ User data not found. Please login again.";
-        errorDiv.style.display = "block";
-      } else {
-        const user = JSON.parse(userDataStr);
-
-        // ⭐ Display full user info
-        userDiv.innerHTML = `
-          <h1>Welcome, ${user.username} 👋</h1>
-
-          <img src="${user.img || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'}" alt="Profile">
-
-          <p><b>User ID:</b> ${user.userId}</p>
-          <p><b>Password:</b> ${user.password}</p>
-
-          <p><b>Email:</b> ${user.googleEmail}</p>
-          <p><b>DOB:</b> ${user.dob}</p>
-
-          <button class="logout-btn" onclick="logout()">Logout</button>
-        `;
+    /* Read URL param */
+    function getQueryParam(param) {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get(param);
+      } catch (e) {
+        safeRedirect();
       }
     }
 
-    // Logout function
+    /* Validate user param */
+    const userId = getQueryParam("user");
+    if (!userId || userId === "null" || userId === "undefined" || userId.trim() === "") {
+      safeRedirect();
+    }
+
+    /* Validate stored user data */
+    let userDataStr = null;
+    try {
+      userDataStr = localStorage.getItem("user_" + userId);
+    } catch (e) {
+      safeRedirect();
+    }
+
+    if (!userDataStr || userDataStr === "null" || userDataStr === "undefined") {
+      safeRedirect();
+    }
+
+    /* Parse JSON safely */
+    let user = null;
+    try {
+      user = JSON.parse(userDataStr);
+    } catch (e) {
+      safeRedirect();
+    }
+
+    /* Extra validation */
+    if (!user || !user.username || !user.password) {
+      safeRedirect();
+    }
+
+    /* If all good → show user info */
+    document.getElementById("userInfo").innerHTML = `
+      <h1>Welcome, ${user.username} 👋</h1>
+
+      <img src="${user.img || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'}" alt="Profile">
+
+      <p><b>User ID:</b> ${user.userId}</p>
+      <p><b>Password:</b> ${user.password}</p>
+      <p><b>Email:</b> ${user.googleEmail}</p>
+      <p><b>DOB:</b> ${user.dob}</p>
+
+      <button class="logout-btn" onclick="logout()">Logout</button>
+    `;
+
+    /* Logout */
     function logout() {
-      localStorage.removeItem("last_logged_in_user");
-      window.location.replace("index.html");
+      try {
+        localStorage.removeItem("last_logged_in_user");
+      } catch (e) {}
+      safeRedirect();
     }
   </script>
 
