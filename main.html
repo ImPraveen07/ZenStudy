@@ -15,7 +15,6 @@
       margin: 0;
     }
 
-    /* ----- TOP-RIGHT EMERGENCY LOGOUT ----- */
     #emergencyLogout {
       position: fixed;
       top: 15px;
@@ -30,132 +29,96 @@
       font-weight: bold;
       box-shadow: 0 0 8px rgba(0,0,0,0.25);
       z-index: 9999;
-      transition: 0.2s;
-    }
-    #emergencyLogout:hover {
-      transform: scale(1.06);
-      background: #f3f3f3;
     }
 
-    /* ----- USER CARD ----- */
     #userInfo {
-      background: rgba(255, 255, 255, 0.18);
+      background: rgba(255,255,255,0.18);
       border-radius: 18px;
-      display: inline-block;
       padding: 30px 40px;
+      display: inline-block;
       backdrop-filter: blur(8px);
       box-shadow: 0 0 20px rgba(255,255,255,0.2);
-      animation: fadeIn 0.6s ease;
       color: white;
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
     img {
-      border-radius: 50%;
       width: 140px;
       height: 140px;
-      margin-bottom: 20px;
+      border-radius: 50%;
       border: 4px solid white;
       object-fit: cover;
-    }
-
-    h1 {
-      margin-top: 0;
-    }
-
-    p {
-      font-size: 1.1em;
-      margin: 8px 0;
+      margin-bottom: 20px;
     }
 
     .logout-btn {
-      margin-top: 25px;
+      margin-top: 20px;
       padding: 12px 26px;
       background: white;
       color: #6366f1;
       border: none;
-      font-weight: bold;
       border-radius: 10px;
+      font-weight: bold;
       cursor: pointer;
-      font-size: 1.05em;
-      transition: 0.2s;
     }
-    .logout-btn:hover {
-      transform: scale(1.07);
-      color: #4f46e5;
-    }
-
   </style>
 </head>
 <body>
 
-  <!-- Always Visible Emergency Logout -->
-  <button id="emergencyLogout" onclick="forceLogout()">Logout</button>
+<button id="emergencyLogout" onclick="logout()">Logout</button>
 
-  <!-- Main User Info Box -->
-  <div id="userInfo">Loading...</div>
+<div id="userInfo">Loading...</div>
 
-  <script>
+<script>
 
-    /* ------------------------ LOGOUT FUNCTION ------------------------ */
-    function forceLogout() {
-      localStorage.removeItem("last_logged_in_user");  // IMPORTANT
-      window.location.replace("index.html");
-    }
+function logout() {
+  localStorage.removeItem("last_logged_in_user");
+  window.location.href = "index.html";
+}
 
-    /* ------------------------ URL PARAM HANDLER ---------------------- */
-    function getQueryParam(param) {
-      try {
-        const url = new URLSearchParams(window.location.search);
-        return url.get(param);
-      } catch (e) {
-        return null;
-      }
-    }
+/* ---------------------- Get user ID safely ---------------------- */
+const params = new URLSearchParams(window.location.search);
+const userId = params.get("user");
 
-    const userId = getQueryParam("user");
+/* If no userId → DO NOT redirect instantly → just show message */
+if (!userId) {
+  document.getElementById("userInfo").innerHTML =
+    "<h2>User data missing. Please login again.</h2>";
+  return;
+}
 
-    // If no user ID → go to login
-    if (!userId || userId === "null" || userId === "undefined" || userId.trim() === "") {
-      forceLogout();
-    }
+/* ---------------------- Load user from storage ---------------------- */
+const rawUser = localStorage.getItem("user_" + userId);
 
-    /* ------------------------ READ USER FROM LOCAL STORAGE ------------------------ */
-    const stored = localStorage.getItem("user_" + userId);
-    if (!stored) {
-      forceLogout();
-    }
+/* If no stored user, show error but DO NOT redirect forcefully */
+if (!rawUser) {
+  document.getElementById("userInfo").innerHTML =
+    "<h2>Account not found. Please login again.</h2>";
+  return;
+}
 
-    let user = null;
-    try {
-      user = JSON.parse(stored);
-    } catch (e) {
-      forceLogout();
-    }
+let userData = null;
+try {
+  userData = JSON.parse(rawUser);
+} catch {
+  document.getElementById("userInfo").innerHTML =
+    "<h2>Corrupted data. Please login again.</h2>";
+  return;
+}
 
-    if (!user || !user.username) {
-      forceLogout();
-    }
+/* ---------------------- Display data ---------------------- */
+document.getElementById("userInfo").innerHTML = `
+  <h1>Welcome, ${userData.username} 👋</h1>
 
-    /* ------------------------ DISPLAY USER DATA ------------------------ */
-    document.getElementById("userInfo").innerHTML = `
-      <h1>Welcome, ${user.username} 👋</h1>
+  <img src="${userData.img || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'}">
 
-      <img src="${user.img || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'}">
+  <p><b>User ID:</b> ${userData.userId}</p>
+  <p><b>Password:</b> ${userData.password}</p>
+  <p><b>Email:</b> ${userData.googleEmail}</p>
+  <p><b>Date of Birth:</b> ${userData.dob}</p>
 
-      <p><b>User ID:</b> ${user.userId}</p>
-      <p><b>Password:</b> ${user.password}</p>
-      <p><b>Email:</b> ${user.googleEmail}</p>
-      <p><b>Date of Birth:</b> ${user.dob}</p>
-
-      <button class="logout-btn" onclick="forceLogout()">Logout</button>
-    `;
-
-  </script>
+  <button class="logout-btn" onclick="logout()">Logout</button>
+`;
+</script>
 
 </body>
 </html>
