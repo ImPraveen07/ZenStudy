@@ -837,12 +837,7 @@ if (signupBtn) {
             
             // Save local session
             // Keep local session for main.html to read
-localStorage.setItem("user_" + newUserId, JSON.stringify(userData));
-            signupMsg.innerHTML = `Success! Your User ID is: <b>${newUserId}</b><br>Redirecting...`;
 
-            setTimeout(() => {
-                window.location.replace(`main.html?user=${encodeURIComponent(newUserId)}`);
-            }, 1000);
 
         } catch (err) {
             console.error(err);
@@ -852,6 +847,19 @@ localStorage.setItem("user_" + newUserId, JSON.stringify(userData));
     };
 }
 
+// index (1) (4).html - Inside signupBtn.onclick success block
+
+// Keep local session for main.html to read (Full Data)
+localStorage.setItem("user_" + newUserId, JSON.stringify(userData));
+
+// *** ADDED: Set the persistence key that index.html checks on refresh ***
+localStorage.setItem("last_logged_in_user", newUserId); 
+
+signupMsg.innerHTML = `Success! Your User ID is: <b>${newUserId}</b><br>Redirecting...`;
+
+setTimeout(() => {
+    window.location.replace(`main.html?user=${encodeURIComponent(newUserId)}`);
+}, 1000);
 
 // --- LOGIN LOGIC IMPLEMENTATION ---
 
@@ -941,15 +949,16 @@ if (googleLoginBtnLogin) {
             const userData = snapshot.docs[0].data();
             const userId = userData.userId;
 
-            // Save full user data locally for main.html
+// Save full user data locally for main.html
 localStorage.setItem("user_" + userId, JSON.stringify(userData));
-localStorage.setItem("last_logged_in_user", userId);
+localStorage.setItem("last_logged_in_user", userId); // THIS IS THE PERSISTENCE KEY
 
 loginMsg.textContent = "Google Login successful. Redirecting...";
 
 setTimeout(() => {
     window.location.replace(`main.html?user=${encodeURIComponent(userId)}`);
 }, 500);
+
         } catch (err) {
             console.error(err);
             loginMsg.textContent = "Google login error: " + err.message;
