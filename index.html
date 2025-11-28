@@ -941,13 +941,15 @@ if (googleLoginBtnLogin) {
             const userData = snapshot.docs[0].data();
             const userId = userData.userId;
 
-            localStorage.setItem('last_logged_in_user', userId);
-            loginMsg.textContent = "Google Login successful. Redirecting...";
+            // Save full user data locally for main.html
+localStorage.setItem("user_" + userId, JSON.stringify(userData));
+localStorage.setItem("last_logged_in_user", userId);
 
-            setTimeout(() => {
-                window.location.replace(`main.html?user=${encodeURIComponent(userId)}`);
-            }, 500);
+loginMsg.textContent = "Google Login successful. Redirecting...";
 
+setTimeout(() => {
+    window.location.replace(`main.html?user=${encodeURIComponent(userId)}`);
+}, 500);
         } catch (err) {
             console.error(err);
             loginMsg.textContent = "Google login error: " + err.message;
