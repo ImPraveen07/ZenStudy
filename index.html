@@ -836,8 +836,8 @@ if (signupBtn) {
             await db.collection('users').doc(newUserId).set(userData);
             
             // Save local session
-            localStorage.setItem('last_logged_in_user', newUserId);
-
+            // Keep local session for main.html to read
+localStorage.setItem("user_" + newUserId, JSON.stringify(userData));
             signupMsg.innerHTML = `Success! Your User ID is: <b>${newUserId}</b><br>Redirecting...`;
 
             setTimeout(() => {
@@ -891,7 +891,8 @@ if (loginBtn) {
             }
 
             // Success
-            localStorage.setItem('last_logged_in_user', userId);
+            // Keep local session for main.html to read
+localStorage.setItem("user_" + newUserId, JSON.stringify(userData));
             loginMsg.textContent = "Login successful. Redirecting...";
 
             setTimeout(() => {
