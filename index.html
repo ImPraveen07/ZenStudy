@@ -6,7 +6,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
   <link href="https://fonts.googleapis.com/css?family=Inter:400,600&display=swap" rel="stylesheet">
   
-  <!-- Firebase Libraries -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -223,7 +222,6 @@
 <body>
   
   <div id="modeSwitchBtn" title="Switch UI Mode">
-    <!-- CORRECTED ICON: New SVG for sun/moon with better centering -->
     <svg id="modeSwitchIcon" width="32" height="32" viewBox="0 0 32 32" fill="none" stroke-linecap="round" stroke-linejoin="round">
         <g class="sun-and-moon">
             <mask id="moon-mask">
@@ -249,7 +247,6 @@
   <div class="room-shadow"></div>
 
   <div class="login-3d-container">
-    <!-- Signup Card -->
     <form class="login-3d-box" id="signupCard" autocomplete="off" onsubmit="return false;">
       <div class="logo-row">
         <img src="Zenstudy.jpg" class="login-3d-logo" alt="logo" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135755.png'">
@@ -286,14 +283,13 @@
       <div class="switch-link" id="toLogin">Already have an account? Login</div>
     </form>
     
-    <!-- Login Card -->
     <form class="login-3d-box hide" id="loginCard" autocomplete="off" onsubmit="return false;">
       <div class="logo-row">
         <img src="https://cdn-icons-png.flaticon.com/512/3135/3135755.png" class="login-3d-logo" alt="logo">
       </div>
       <div class="login-3d-title" id="loginTitle">Login</div>
       <div class="login-3d-fields">
-        <input type="text" id="loginUser" placeholder="User ID" autocomplete="off" required>
+        <input type="text" id="loginUser" placeholder="Google Email" autocomplete="off" required>
         <input type="password" id="loginPass" placeholder="Password" autocomplete="off" required>
       </div>
       <button type="button" id="googleLoginBtnLogin" class="login-3d-btn" style="margin-top:10px;background:#fff;color:#222;border:1px solid #6366f1;">
@@ -306,7 +302,6 @@
     
   </div>
   
-  <!-- Popup Overlay -->
   <div id="profilePopup" class="profile-popup">
     <div class="popup-content">
       <button class="popup-close" id="popupCloseBtn" aria-label="Close"><svg width="32" height="32" viewBox="0 0 32 32" fill="none"><path d="M20 24L12 16L20 8" stroke="#6366f1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -314,7 +309,6 @@
     </div>
   </div>
   
-  <!-- Offline Indicator -->
   <div id="offline-indicator">
       <div class="offline-scene">
           <div class="offline-phone"></div>
@@ -324,18 +318,6 @@
       </div>
       <div class="offline-message">Connection Failed :(</div>
   </div>
-<script>
-const lastUser = localStorage.getItem("last_logged_in_user");
-
-if (lastUser) {
-  const userData = localStorage.getItem("user_" + lastUser);
-  
-  // redirect ONLY if user exists in localStorage
-  if (userData) {
-    window.location.replace(`main.html?user=${encodeURIComponent(lastUser)}`);
-  }
-}
-</script>
 <script>
 const lastUser = localStorage.getItem("last_logged_in_user");
 
@@ -354,12 +336,13 @@ if (lastUser) {
   /**
  * ==========================================
  * 1. FIREBASE CONFIGURATION & INITIALIZATION
+ * (NOTE: The API key is public and must be protected by Firestore Rules)
  * ==========================================
  */
 const firebaseConfig = {
-    apiKey: "AIzaSyC9rehsf-0jkb9dAeT1-0Z1C-yRJ0YI9dA", // <-- !!! REPLACE THIS !!!
-    authDomain: "gymnm-ce84b.firebaseapp.com", // <-- !!! REPLACE THIS !!!
-    projectId: "gymnm-ce84b", // <-- !!! REPLACE THIS !!!
+    apiKey: "AIzaSyC9rehsf-0jkb9dAeT1-0Z1C-yRJ0YI9dA", 
+    authDomain: "gymnm-ce84b.firebaseapp.com",
+    projectId: "gymnm-ce84b",
     storageBucket: "gymnm-ce84b.appspot.com",
     messagingSenderId: "474926929394",
     appId: "1:474926929394:web:6abdb807caba2751a5c76b",
@@ -439,7 +422,7 @@ async function imageUrlToBase64(url) {
 
 /**
  * ==========================================
- * 4. THEME & VISUALS LOGIC
+ * 4. THEME & VISUALS LOGIC (UNCHANGED)
  * ==========================================
  */
 const modeSwitchBtn = document.getElementById('modeSwitchBtn');
@@ -518,7 +501,7 @@ if (modeSwitchBtn) {
 
 /**
  * ==========================================
- * 5. 3D MOTION & GYROSCOPE LOGIC
+ * 5. 3D MOTION & GYROSCOPE LOGIC (UNCHANGED)
  * ==========================================
  */
 const motionHandler = { listener: null };
@@ -635,7 +618,7 @@ setup3d('#loginCard', '.room-shadow');
 
 /**
  * ==========================================
- * 6. UI HANDLERS (Switching Cards, Popups)
+ * 6. UI HANDLERS (Switching Cards, Popups) (UNCHANGED)
  * ==========================================
  */
 const signupCard = document.getElementById('signupCard');
@@ -683,7 +666,7 @@ if (popup) {
 
 /**
  * ==========================================
- * 7. AUTHENTICATION LOGIC (Signup & Login)
+ * 7. SECURE AUTHENTICATION LOGIC (Signup & Login)
  * ==========================================
  */
 
@@ -758,12 +741,11 @@ async function connectGoogle(promptForAccount = false) {
         const result = await firebase.auth().signInWithPopup(provider);
         const user = result.user;
 
-        // Check if Google email is already used in Firestore
-        const usersRef = db.collection('users');
-        const snapshot = await usersRef.where("googleEmail", "==", user.email).get();
+        // Check if a profile already exists linked to this secure Auth UID
+        const existingProfile = await db.collection('users').doc(user.uid).get();
 
-        if (!snapshot.empty) {
-            signupMsg.innerHTML = "⚠️ This Google account already has an account.<br>Please login.";
+        if (existingProfile.exists) {
+            signupMsg.innerHTML = "⚠️ This Google account is already registered.<br>Please login.";
             googleConnectBtn.classList.remove("hide");
             googleAccountInfo.classList.add("hide");
             googleUser = null;
@@ -797,27 +779,36 @@ if (googleConnectBtn) {
     googleConnectBtn.onclick = () => connectGoogle(true);
 }
 
-// *** ADDED: Logic to re-select Google account by clicking the picked card ***
+// Logic to re-select Google account by clicking the picked card
 if (googleAccountInfo) {
-    googleAccountInfo.onclick = () => connectGoogle(true); // Forces re-selection
+    googleAccountInfo.onclick = () => connectGoogle(true); 
 }
 
 
-// --- Final Signup Logic ---
+// --- Final Signup Logic (SECURELY FIXED) ---
 if (signupBtn) {
     signupBtn.onclick = async function() {
         if (signupBtn.disabled || !googleUser) return;
 
         signupBtn.disabled = true;
-        signupMsg.textContent = "Creating your account...";
+        signupMsg.textContent = "Creating your account securely...";
 
         try {
+            // 1. SECURELY CREATE USER IN FIREBASE AUTH (This hashes and stores the password)
+            const email = googleUser.email; 
+            const password = signupPass.value;
+
+            const authResult = await firebase.auth().createUserWithEmailAndPassword(email, password);
+            const user = authResult.user;
+            const uid = user.uid; // This is the secure ID for the user
+
+            // Generate custom User ID (for local storage/main.html compatibility)
             const dob = new Date(signupDOB.value);
             const day = String(dob.getDate()).padStart(2, '0');
             const month = String(dob.getMonth() + 1).padStart(2, '0');
             const baseUsername = signupUser.value.trim().replace(/\s+/g, '');
             const randomChars = generateRandomChars(4);
-            const newUserId = `${baseUsername}${day}${month}${randomChars}`;
+            const newUserId = `${baseUsername}${day}${month}${randomChars}`; 
 
             // Attempt to convert image
             let imgBase64 = null;
@@ -825,32 +816,22 @@ if (signupBtn) {
                 imgBase64 = await imageUrlToBase64(googleUser.photoURL);
             }
 
+            // 2. STORE NON-SENSITIVE PROFILE DATA IN FIRESTORE
             const userData = {
-                userId: newUserId,
+                userId: newUserId,      // Custom ID for redirect/local storage key
                 username: signupUser.value.trim(),
                 dob: signupDOB.value,
-                password: signupPass.value,
-                img: imgBase64, 
+                // **CRITICAL FIX: REMOVED PASSWORD FIELD**
+                img: imgBase64,
                 googleEmail: googleUser.email,
-                googleName: googleUser.displayName
+                googleName: googleUser.displayName,
+                authUid: uid            
             };
 
-            // Check if userId is already taken (unlikely with the random component, but good practice)
-            const userCheck = await db.collection('users').doc(newUserId).get();
-            if (userCheck.exists) {
-                // If it exists, you'd need a robust way to generate a new unique ID, 
-                // but for this example, we assume the random part makes it unique enough.
-                signupMsg.textContent = "User ID generation error. Try again.";
-                signupBtn.disabled = false;
-                return;
-            }
-
-            // Write to Firestore
-            await db.collection('users').doc(newUserId).set(userData);
+            // Use the Firebase Auth UID as the Firestore document ID (CRITICAL FIX)
+            await db.collection('users').doc(uid).set(userData);
             
-            // ==========================================================
-            // PERSISTENCE & REDIRECT
-            // ==========================================================
+            // 3. PERSISTENCE & REDIRECT (Store non-sensitive data)
             localStorage.setItem("user_" + newUserId, JSON.stringify(userData));
             localStorage.setItem("last_logged_in_user", newUserId); 
 
@@ -863,54 +844,56 @@ if (signupBtn) {
 
         } catch (err) {
             console.error(err);
-            signupMsg.textContent = "Signup error: " + err.message;
+            // Handle common auth errors (e.g., email already in use)
+            if (err.code === 'auth/email-already-in-use') {
+                signupMsg.innerHTML = "Signup error: This Google email is already registered. Please login.";
+            } else {
+                signupMsg.textContent = "Signup error: " + err.message;
+            }
+            // Ensure no partial sign-in state is left
+            firebase.auth().signOut().catch(() => {});
             signupBtn.disabled = false;
         }
     };
 }
 
 
-// --- LOGIN LOGIC IMPLEMENTATION ---
-
-// 1. Traditional Login Handler
+// --- TRADITIONAL LOGIN LOGIC (SECURELY FIXED) ---
 if (loginBtn) {
     loginBtn.onclick = async function() {
-        const userId = loginUser.value.trim();
+        // Now expecting the Google Email used for signup
+        const email = loginUser.value.trim(); 
         const password = loginPass.value;
 
-        if (!userId || !password) {
-            loginMsg.textContent = "Please enter both User ID and Password.";
+        if (!email || !password) {
+            loginMsg.textContent = "Please enter both Email and Password.";
             return;
         }
 
         loginBtn.disabled = true;
-        loginMsg.textContent = "Logging in...";
+        loginMsg.textContent = "Logging in securely...";
 
         try {
-            // Check if user exists in Firestore
-            const userDoc = await db.collection('users').doc(userId).get();
+            // 1. SECURELY SIGN IN WITH FIREBASE AUTH (This checks the password securely)
+            const authResult = await firebase.auth().signInWithEmailAndPassword(email, password);
+            const uid = authResult.user.uid;
+
+            // 2. FETCH PROFILE DATA FROM FIRESTORE USING THE SECURE UID
+            const userDoc = await db.collection('users').doc(uid).get();
 
             if (!userDoc.exists) {
-                loginMsg.textContent = "⚠️ User not found. Please check your User ID.";
-                loginUser.classList.add('input-error');
+                loginMsg.textContent = "⚠️ User profile data missing. Contact support.";
+                await firebase.auth().signOut();
                 loginBtn.disabled = false;
                 return;
             }
 
             const userData = userDoc.data();
+            const userId = userData.userId; // Get the custom ID for redirect
 
-            // Check password
-            if (userData.password !== password) {
-                loginMsg.textContent = "⚠️ Wrong password. Please try again.";
-                loginPass.classList.add('input-error');
-                loginBtn.disabled = false;
-                return;
-            }
-
-            // Success
-            // Keep local session for main.html to read
+            // 3. Success & Local Session
             localStorage.setItem("user_" + userId, JSON.stringify(userData));
-            localStorage.setItem("last_logged_in_user", userId); 
+            localStorage.setItem("last_logged_in_user", userId);
 
             loginMsg.textContent = "Login successful. Redirecting...";
 
@@ -920,7 +903,15 @@ if (loginBtn) {
 
         } catch (err) {
             console.error(err);
-            loginMsg.textContent = "Login error: " + err.message;
+            // Handle common authentication errors
+            if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-email') {
+                loginMsg.textContent = "⚠️ Invalid Email or Password.";
+                loginUser.classList.add('input-error');
+                loginPass.classList.add('input-error');
+            } else {
+                loginMsg.textContent = "Login error: " + err.message;
+            }
+
         } finally {
             loginBtn.disabled = false;
             loginUser.classList.remove('input-error');
@@ -930,7 +921,7 @@ if (loginBtn) {
 }
 
 
-// 2. Google Login on Login Card Handler
+// --- GOOGLE LOGIN ON LOGIN CARD (SECURELY FIXED) ---
 if (googleLoginBtnLogin) {
     googleLoginBtnLogin.onclick = async function() {
         if (isGoogleSigningIn) return;
@@ -941,23 +932,25 @@ if (googleLoginBtnLogin) {
         const provider = new firebase.auth.GoogleAuthProvider();
         
         try {
+            // 1. SIGN IN WITH FIREBASE AUTH
             const result = await firebase.auth().signInWithPopup(provider);
             const user = result.user;
+            const uid = user.uid; // The secure identifier
 
-            // Check if the Google email is linked to an account in Firestore
-            const usersRef = db.collection('users');
-            const snapshot = await usersRef.where("googleEmail", "==", user.email).get();
+            // 2. FETCH PROFILE DATA FROM FIRESTORE USING THE SECURE UID
+            const userDoc = await db.collection('users').doc(uid).get();
 
-            if (snapshot.empty) {
-                // Account not found via Google email
-                loginMsg.innerHTML = "⚠️ No account found linked to this Google email.<br>Please sign up first.";
+            if (!userDoc.exists) {
+                // User is authenticated with Google, but no profile was created (i.e., they didn't complete signup)
+                loginMsg.innerHTML = "⚠️ No linked profile found.<br>Please sign up with Email/Password first.";
+                await firebase.auth().signOut();
                 googleLoginBtnLogin.disabled = false;
                 return;
             }
             
-            // Account found! Log them in.
-            const userData = snapshot.docs[0].data();
-            const userId = userData.userId;
+            // Account found!
+            const userData = userDoc.data();
+            const userId = userData.userId; // Get the custom ID for redirect
 
             // Save full user data locally for main.html
             localStorage.setItem("user_" + userId, JSON.stringify(userData));
@@ -971,7 +964,11 @@ if (googleLoginBtnLogin) {
 
         } catch (err) {
             console.error(err);
-            loginMsg.textContent = "Google login error: " + err.message;
+            if (err.code === 'auth/popup-closed-by-user') {
+                 loginMsg.textContent = "Google login cancelled.";
+            } else {
+                 loginMsg.textContent = "Google login error: " + err.message;
+            }
         } finally {
             isGoogleSigningIn = false;
             googleLoginBtnLogin.disabled = false;
