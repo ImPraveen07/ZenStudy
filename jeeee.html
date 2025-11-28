@@ -8,383 +8,83 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <style>
-    body {
-      font-family: 'Inter', Arial, sans-serif;
-      background: #e0e7ff;
-      margin: 0;
-      min-height: 100vh;
-    }
-    .user-bar {
-      display: flex;
-      align-items: center;
-      background: #6366f1;
-      color: #fff;
-      padding: 12px 18px;
-      position: relative;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    .user-img {
-      width: 54px;
-      height: 54px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 2px solid #fff;
-      margin-right: 16px;
-      cursor: pointer;
-      box-shadow: 0 2px 8px #6366f155;
-      transition: box-shadow 0.2s;
-      background: #fff;
-    }
-    .user-img:hover {
-      box-shadow: 0 4px 16px #6366f1aa;
-    }
-    .user-info {
-      font-size: 1.1em;
-      font-weight: 600;
-      flex: 1 1 auto;
-      min-width: 0;
-      word-break: break-all;
-    }
-    .user-id-copy {
-      margin-left: 8px;
-      font-size: 0.98em;
-      color: #6366f1;
-      background: #fff;
-      border-radius: 6px;
-      padding: 2px 8px;
-      border: 1.2px solid #6366f1;
-      cursor: pointer;
-      user-select: all;
-      transition: background 0.2s, color 0.2s;
-      font-weight: 700;
-      position: relative;
-      min-width: 60px;
-      text-align: center;
-      display: inline-block;
-    }
-    .user-id-copy.copied {
-      color: #fff;
-      background: #6366f1;
-      border-color: #6366f1;
-    }
-    #logoutBtn {
-      position: fixed;
-      top: 18px;
-      right: 18px;
-      z-index: 999;
-      background: #fff;
-      color: #6366f1;
-      font-weight: 700;
-      border-radius: 8px;
-      border: 1.5px solid #6366f1;
-      padding: 8px 18px;
-      cursor: pointer;
-      box-shadow: 0 2px 8px #6366f122;
-      transition: background 0.2s, color 0.2s;
-    }
-    #logoutBtn:hover {
-      background: #6366f1;
-      color: #fff;
-    }
-    .edit-popup-bg {
-      position: fixed;
-      inset: 0;
-      background: rgba(30, 41, 59, 0.18);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.35s;
-    }
-    .edit-popup-bg.open {
-      opacity: 1;
-      pointer-events: auto;
-    }
-    .edit-popup {
-      background: #fff;
-      border-radius: 24px;
-      box-shadow: 0 8px 40px #6366f1aa;
-      padding: 32px 24px 24px 24px;
-      min-width: 320px;
-      max-width: 92vw;
-      width: 350px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      position: relative;
-      animation: pop3d 0.7s cubic-bezier(.68,-0.55,.27,1.55);
-    }
-    @keyframes pop3d {
-      0% { transform: scale(0.7); opacity: 0; }
-      80% { transform: scale(1.05); opacity: 1; }
-      100% { transform: scale(1); opacity: 1; }
-    }
-    .edit-popup input[type="text"], .edit-popup input[type="password"] {
-      width: 100%;
-      padding: 12px 14px;
-      margin-bottom: 14px;
-      border-radius: 10px;
-      border: 1.5px solid #6366f1;
-      font-size: 1em;
-      background: #f3f4f6;
-      color: #222;
-      outline: none;
-      font-family: inherit;
-      font-weight: 500;
-      transition: border 0.2s;
-    }
-    .edit-popup input[type="file"] {
-      margin-bottom: 10px;
-    }
-    .edit-popup .edit-img-preview {
-      width: 70px;
-      height: 70px;
-      border-radius: 50%;
-      object-fit: cover;
-      margin-bottom: 10px;
-      border: 2px solid #6366f1;
-      background: #f3f4f6;
-    }
-    .edit-popup .edit-btn {
-      background: linear-gradient(90deg, #6366f1 10%, #818cf8 90%);
-      color: #fff;
-      border: none;
-      border-radius: 10px;
-      padding: 12px 0;
-      font-size: 1.08em;
-      font-weight: 700;
-      width: 100%;
-      cursor: pointer;
-      margin-top: 8px;
-      box-shadow: 0 2px 8px #6366f155;
-      transition: background 0.2s;
-    }
-    .edit-popup .edit-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    .edit-popup .close-btn {
-      position: absolute;
-      top: 10px; right: 10px;
-      background: #fff;
-      border: none;
-      border-radius: 50%;
-      width: 32px; height: 32px;
-      box-shadow: 0 2px 8px #6366f122;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .edit-popup .close-btn:hover {
-      background: #6366f1;
-      color: #fff;
-    }
-    .edit-popup .edit-msg {
-      min-height: 20px;
-      text-align: center;
-      color: #6366f1;
-      font-weight: 600;
-      margin-top: 10px;
-      font-size: 1em;
-    }
-    .password-eye {
-      position: absolute;
-      right: 32px;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 28px;
-      height: 28px;
-      cursor: pointer;
-      z-index: 2;
-      background: none;
-      border: none;
-      outline: none;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
-    }
-    .password-eye svg {
-      width: 24px;
-      height: 24px;
-      display: block;
-      transition: 0.2s;
-    }
-    .password-eye .eye-closed {
-      display: none;
-    }
-    .password-eye.closed .eye-open {
-      display: none;
-    }
-    .password-eye.closed .eye-closed {
-      display: block;
-    }
-    .edit-password-wrap {
-      position: relative;
-      width: 100%;
-      margin-bottom: 14px;
-    }
-    .fixed-username {
-      font-size: 0.98em;
-      color: #6366f1;
-      font-weight: 700;
-      margin-bottom: 10px;
-      background: #f3f4f6;
-      border-radius: 8px;
-      padding: 7px 0;
-      width: 100%;
-      text-align: center;
-      border: 1.5px solid #6366f1;
-      letter-spacing: 0.04em;
-      user-select: all;
-    }
-    @media (max-width: 500px) {
-      .edit-popup { min-width: 90vw; width: 96vw; padding: 14px 2vw 10px 2vw;}
-      .user-img { width: 40px; height: 40px; }
-      #logoutBtn { top: 8px; right: 8px; padding: 6px 12px; }
-      .user-bar { flex-direction: column; align-items: flex-start; gap: 6px; }
-      .user-id-copy { margin-left: 0; margin-top: 4px; }
-    }
-    .subject-widget {
-  width: 260px;
-  padding: 20px;
-  border-radius: 20px;
-  background: #fff;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-  text-align: center;
-  font-family: 'Inter', sans-serif;
-  margin: 30px auto;
-}
+    body { font-family: 'Inter', Arial, sans-serif; background:#e0e7ff; margin:0; min-height:100vh; }
+    .user-bar { display:flex; align-items:center; background:#6366f1; color:#fff; padding:12px 18px; position:relative; flex-wrap:wrap; gap:8px; }
+    .user-img { width:54px; height:54px; border-radius:50%; object-fit:cover; border:2px solid #fff; margin-right:16px; cursor:pointer; box-shadow:0 2px 8px #6366f155; transition: box-shadow 0.2s; background:#fff; }
+    .user-img:hover { box-shadow:0 4px 16px #6366f1aa; }
+    .user-info { font-size:1.1em; font-weight:600; flex:1 1 auto; min-width:0; word-break:break-all; }
+    .user-id-copy { margin-left:8px; font-size:0.98em; color:#6366f1; background:#fff; border-radius:6px; padding:2px 8px; border:1.2px solid #6366f1; cursor:pointer; user-select:all; transition: background 0.2s, color 0.2s; font-weight:700; position:relative; min-width:60px; text-align:center; display:inline-block; }
+    .user-id-copy.copied { color:#fff; background:#6366f1; border-color:#6366f1; }
+    #logoutBtn { position:fixed; top:18px; right:18px; z-index:999; background:#fff; color:#6366f1; font-weight:700; border-radius:8px; border:1.5px solid #6366f1; padding:8px 18px; cursor:pointer; box-shadow:0 2px 8px #6366f122; transition:background 0.2s, color 0.2s; }
+    #logoutBtn:hover { background:#6366f1; color:#fff; }
 
-.subject-header {
-  font-size: 1.1em;
-  font-weight: 700;
-  color: #4A4A4A;
-  margin-bottom: 6px;
-}
+    /* Subject Widget */
+    .subject-widget { width:260px; padding:20px; border-radius:20px; background:#fff; box-shadow:0 10px 25px rgba(0,0,0,0.15); text-align:center; font-family:'Inter', sans-serif; margin:20px auto; }
+    .subject-header { font-size:1.1em; font-weight:700; color:#4A4A4A; margin-bottom:6px; }
+    .subject-name { font-size:1.4em; font-weight:800; color:#111; margin-bottom:15px; animation:tick 1s infinite ease-in-out; }
+    @keyframes tick { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+    .progress-circle { position:relative; width:90px; height:90px; margin:0 auto 20px; }
+    .progress-circle svg { transform: rotate(-90deg); width:100%; height:100%; }
+    .progress-circle circle { fill:none; stroke-width:8; stroke-linecap:round; stroke:#e5e7eb; }
+    .progress-circle #progressCircle { stroke:#6366f1; stroke-dasharray:219.911; stroke-dashoffset:219.911; transition:stroke-dashoffset 0.5s ease; }
+    .progress-circle span { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-weight:700; color:#6366f1; }
+    #markDoneBtn { background:#6366f1; color:#fff; border:none; padding:10px 14px; border-radius:10px; font-weight:700; cursor:pointer; transition:0.2s; }
+    #markDoneBtn:hover { background:#4f46e5; }
 
-.subject-name {
-  font-size: 1.4em;
-  font-weight: 800;
-  color: #111;
-  margin-bottom: 15px;
-  animation: tick 1s infinite ease-in-out;
-}
+    /* Task list */
+    #taskList { list-style:none; padding:0; margin-top:10px; }
+    #taskList li { background:#f3f4f6; padding:10px 14px; border-radius:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; font-weight:600; animation:fadeIn 0.6s ease; }
+    #taskList li.completed { background:#d1fae5; text-decoration:line-through; color:#16a34a; }
+    #taskList button { border:none; background:#6366f1; color:#fff; border-radius:8px; padding:4px 8px; cursor:pointer; transition:0.2s; }
+    #taskList button:hover { background:#4f46e5; }
 
-@keyframes tick {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
-}
-
-.progress-circle {
-  position: relative;
-  width: 90px;
-  height: 90px;
-  margin: 0 auto 20px;
-}
-
-.progress-circle svg {
-  transform: rotate(-90deg);
-  width: 100%;
-  height: 100%;
-}
-
-.progress-circle circle {
-  fill: none;
-  stroke-width: 8;
-  stroke-linecap: round;
-  stroke: #e5e7eb;
-}
-
-.progress-circle #progressCircle {
-  stroke: #6366f1;
-  stroke-dasharray: 219.911; /* 2π*35 */
-  stroke-dashoffset: 219.911;
-  transition: stroke-dashoffset 0.5s ease;
-}
-
-.progress-circle span {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-weight: 700;
-  color: #6366f1;
-}
-
-#markDoneBtn {
-  background: #6366f1;
-  color: #fff;
-  border: none;
-  padding: 10px 14px;
-  border-radius: 10px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-#markDoneBtn:hover {
-  background: #4f46e5;
-}
+    @keyframes fadeIn { 0% {opacity:0; transform:translateY(-10px);} 100% {opacity:1; transform:translateY(0);} }
   </style>
 </head>
 <body>
-  
   <button id="logoutBtn">Logout</button>
   <div class="user-bar">
     <img id="userImg" class="user-img" src="" alt="Profile">
     <div class="user-info" id="userInfo"></div>
     <span id="userIdCopy" class="user-id-copy" title="Click to copy User ID"></span>
   </div>
-  <div style="padding: 32px;">
+
+  <div style="padding:32px; text-align:center;">
     <h2>Welcome to your dashboard!</h2>
-    <p>This is a demo user page. Click your profile image to edit your info.</p>
-  </div>
-  <!-- Subject of the Day Widget -->
-<div class="subject-widget">
-  <div class="subject-header">Subject of the Day</div>
-  <div class="subject-name" id="subjectName">Mathematics</div>
-
-  <div class="progress-circle">
-    <svg>
-      <circle cx="40" cy="40" r="35"></circle>
-      <circle id="progressCircle" cx="40" cy="40" r="35"></circle>
-    </svg>
-    <span id="percentText">0%</span>
+    <p>Click your profile image to edit your info.</p>
   </div>
 
-  <button id="markDoneBtn">Mark as Completed ✔</button>
-</div>
-  <div class="edit-popup-bg" id="editPopupBg">
-    <form class="edit-popup" id="editForm" autocomplete="off" onsubmit="return false;">
-      <button class="close-btn" id="closeEditBtn" type="button" title="Close">&times;</button>
-      <div class="fixed-username" id="fixedUsername"></div>
-      <input type="text" id="editDisplayName" placeholder="Display Name (others see this)" required>
-      <div class="edit-password-wrap">
-        <input type="password" id="editPassword" placeholder="Password (min 6 chars)" required>
-        <button type="button" class="password-eye" id="togglePassword">
-          <span class="eye-open">
-            <svg viewBox="0 0 24 24" fill="none"><ellipse cx="12" cy="12" rx="8" ry="5" stroke="#6366f1" stroke-width="2"/><circle cx="12" cy="12" r="2" fill="#6366f1"/></svg>
-          </span>
-          <span class="eye-closed">
-            <svg viewBox="0 0 24 24" fill="none"><ellipse cx="12" cy="12" rx="8" ry="5" stroke="#6366f1" stroke-width="2"/><path d="M4 4L20 20" stroke="#6366f1" stroke-width="2" stroke-linecap="round"/></svg>
-          </span>
-        </button>
-      </div>
-      <input type="file" id="editImg" accept="image/*">
-      <img id="editImgPreview" class="edit-img-preview" src="" alt="Profile">
-      <button class="edit-btn" id="editSaveBtn" type="button">Save Changes</button>
-      <div class="edit-msg" id="editMsg"></div>
-    </form>
+  <!-- Subject Widget -->
+  <div class="subject-widget">
+    <div class="subject-header">Subject of the Day</div>
+    <div class="subject-name" id="subjectName">Mathematics</div>
+    <div class="progress-circle">
+      <svg>
+        <circle cx="40" cy="40" r="35"></circle>
+        <circle id="progressCircle" cx="40" cy="40" r="35"></circle>
+      </svg>
+      <span id="percentText">0%</span>
+    </div>
+    <button id="markDoneBtn">Mark as Completed ✔</button>
   </div>
+
+  <!-- Task Input -->
+  <div class="subject-widget" style="margin-bottom:20px;">
+    <div class="subject-header">Add Task</div>
+    <input type="text" id="taskInput" placeholder="Enter task name" style="width:60%;padding:8px;border-radius:8px;border:1px solid #6366f1;">
+    <select id="taskInterval" style="padding:8px;border-radius:8px;border:1px solid #6366f1;margin-left:5px;">
+      <option value="1">Every 1 min</option>
+      <option value="5">Every 5 min</option>
+      <option value="10">Every 10 min</option>
+      <option value="60">Every 1 hour</option>
+    </select>
+    <button id="addTaskBtn" style="padding:8px 12px;margin-left:5px;border:none;border-radius:8px;background:#6366f1;color:#fff;cursor:pointer;">Add Task</button>
+  </div>
+
+  <ul id="taskList"></ul>
+
   <script>
-    // --- Firebase Setup ---
+    // Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyC9rehsf-0jkb9dAeT1-0Z1C-yRJ0YI9dA",
       authDomain: "gymnm-ce84b.firebaseapp.com",
@@ -397,239 +97,91 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // --- Get username from query ---
-    function getQueryParam(name) {
-      const url = new URL(window.location.href);
-      return url.searchParams.get(name);
-    }
-    let currentUser = getQueryParam('user');
-    if (!currentUser) {
-      alert("No user specified. Redirecting to login.");
-      window.location.href = "index.html";
-    }
-
-    // --- Elements ---
+    // Elements
     const userImg = document.getElementById('userImg');
     const userInfo = document.getElementById('userInfo');
     const userIdCopy = document.getElementById('userIdCopy');
-    const editPopupBg = document.getElementById('editPopupBg');
-    const editForm = document.getElementById('editForm');
-    const editImg = document.getElementById('editImg');
-    const editImgPreview = document.getElementById('editImgPreview');
-    const editDisplayName = document.getElementById('editDisplayName');
-    const editPassword = document.getElementById('editPassword');
-    const editSaveBtn = document.getElementById('editSaveBtn');
-    const editMsg = document.getElementById('editMsg');
-    const closeEditBtn = document.getElementById('closeEditBtn');
-    const togglePassword = document.getElementById('togglePassword');
+    const subjectNameEl = document.getElementById('subjectName');
+    const progressCircle = document.getElementById('progressCircle');
+    const percentText = document.getElementById('percentText');
+    const markDoneBtn = document.getElementById('markDoneBtn');
+    const taskInput = document.getElementById('taskInput');
+    const taskInterval = document.getElementById('taskInterval');
+    const addTaskBtn = document.getElementById('addTaskBtn');
+    const taskListEl = document.getElementById('taskList');
     const logoutBtn = document.getElementById('logoutBtn');
-    const fixedUsername = document.getElementById('fixedUsername');
 
-    let userData = null;
-    let newImgBase64 = null;
+    // Current user from URL
+    let currentUser = new URLSearchParams(window.location.search).get('user');
+    if (!currentUser) { alert("No user specified."); window.location.href="index.html"; }
 
-    // --- Load user data (LocalStorage first, then Firebase) ---
-    async function loadUserData() {
-      let localData = localStorage.getItem('user_' + currentUser);
-      if (localData) {
-        userData = JSON.parse(localData);
-        setUserUI();
-      } else {
-        // Try Firebase
-        try {
-          const doc = await db.collection('users').doc(currentUser).get();
-          if (doc.exists) {
-            userData = doc.data();
-            setUserUI();
-          } else {
-            alert("User not found. Redirecting to login.");
-            window.location.href = "https://bermudatriangle777.github.io/ZenStudy.com1/";
-          }
-        } catch (err) {
-          alert("Firebase error: " + err.message);
-        }
-      }
+    let tasks = JSON.parse(localStorage.getItem('tasks_' + currentUser) || "[]");
+    let completed = localStorage.getItem('subject_completed') === 'true';
+
+    // Subject widget
+    function updateProgress() {
+      let percent = completed ? 100 : 0;
+      percentText.textContent = percent + "%";
+      let dashoffset = 219.911 - (219.911 * percent / 100);
+      progressCircle.style.strokeDashoffset = dashoffset;
     }
+    markDoneBtn.onclick = () => { completed = true; localStorage.setItem('subject_completed','true'); updateProgress(); };
+    updateProgress();
 
-    function setUserUI() {
-      userImg.src = userData.img;
-      userInfo.textContent = userData.displayName || userData.username;
-      userIdCopy.textContent = "ID: " + currentUser;
-      userIdCopy.setAttribute("title", "Click to copy User ID");
+    // Tasks rendering
+    function renderTasks() {
+      taskListEl.innerHTML = "";
+      tasks.forEach((t, i) => {
+        const li = document.createElement('li');
+        li.textContent = t.name;
+        if(t.completed) li.classList.add('completed');
+        const btn = document.createElement('button');
+        btn.textContent = t.completed ? 'Undo' : 'Done';
+        btn.onclick = () => { tasks[i].completed = !tasks[i].completed; localStorage.setItem('tasks_' + currentUser, JSON.stringify(tasks)); renderTasks(); };
+        li.appendChild(btn);
+        taskListEl.appendChild(li);
+      });
     }
+    renderTasks();
 
-    // --- User ID copy logic ---
-    userIdCopy.onclick = function() {
-      navigator.clipboard.writeText(currentUser).then(() => {
-        userIdCopy.classList.add('copied');
-        userIdCopy.textContent = "Copied!";
-        setTimeout(() => {
-          userIdCopy.classList.remove('copied');
-          userIdCopy.textContent = "ID: " + currentUser;
-        }, 1200);
-      });
-    };
-// --- Subject of the Day Widget ---
-const subjectNameEl = document.getElementById('subjectName');
-const progressCircle = document.getElementById('progressCircle');
-const percentText = document.getElementById('percentText');
-const markDoneBtn = document.getElementById('markDoneBtn');
-
-let subjectOfDay = "Mathematics"; // can later randomize or fetch
-let completed = localStorage.getItem('subject_completed') === 'true';
-
-subjectNameEl.textContent = subjectOfDay;
-
-function updateProgress() {
-  let percent = completed ? 100 : 0;
-  percentText.textContent = percent + "%";
-  let dashoffset = 219.911 - (219.911 * percent / 100);
-  progressCircle.style.strokeDashoffset = dashoffset;
-}
-
-markDoneBtn.onclick = function() {
-  completed = true;
-  localStorage.setItem('subject_completed', 'true');
-  updateProgress();
-};
-
-updateProgress();
-    // --- Notification logic ---
-function notifyTask(task) {
-  if (Notification.permission === 'granted') {
-    navigator.serviceWorker.getRegistration().then(reg => {
-      reg.showNotification('ZenStudy Reminder', {
-        body: `Task "${task}" is pending!`,
-        icon: '/Picsart_25-11-28_15-47-25-082.png',
-        badge: '/Picsart_25-11-28_15-47-16-095.png',
-        data: { url: '/jeeee.html' }
-      });
-    });
-  }
-}
-
-// Check task every hour
-setInterval(() => {
-  let taskPending = localStorage.getItem('subject_completed') !== 'true';
-  if (taskPending) notifyTask('Complete your subject of the day!');
-}, 60 * 60 * 1000); // 1 hour
-    // --- Edit popup logic ---
-    userImg.onclick = function() {
-      fixedUsername.textContent = "Account: " + currentUser;
-      editDisplayName.value = userData.displayName || userData.username;
-      editPassword.value = userData.password;
-      editImgPreview.src = userData.img;
-      editMsg.textContent = "";
-      editPopupBg.classList.add('open');
-    };
-    closeEditBtn.onclick = function() {
-      editPopupBg.classList.remove('open');
-    };
-    editPopupBg.onclick = function(e) {
-      if (e.target === editPopupBg) editPopupBg.classList.remove('open');
+    // Add task
+    addTaskBtn.onclick = () => {
+      const name = taskInput.value.trim();
+      const interval = parseInt(taskInterval.value);
+      if (!name) return;
+      tasks.push({name, interval, completed:false});
+      localStorage.setItem('tasks_' + currentUser, JSON.stringify(tasks));
+      renderTasks();
+      taskInput.value = "";
     };
 
-    // Show new image preview and compress if large
-    editImg.onchange = function() {
-      if (editImg.files && editImg.files[0]) {
-        const file = editImg.files[0];
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          // Compress image if > 200KB
-          compressImage(e.target.result, 200, function(compressedBase64) {
-            newImgBase64 = compressedBase64;
-            editImgPreview.src = compressedBase64;
+    // Notifications
+    function notifyTask(task) {
+      if (Notification.permission === "granted") {
+        navigator.serviceWorker.getRegistration().then(reg => {
+          if(reg) reg.showNotification("ZenStudy Reminder", {
+            body: `Task "${task.name}" is pending!`,
+            icon: '/Picsart_25-11-28_15-47-25-082.png',
+            badge: '/Picsart_25-11-28_15-47-16-095.png',
+            data: { url: '/jeeee.html' }
           });
-        };
-        reader.readAsDataURL(file);
+        });
       }
-    };
-
-    // Compress image to max size (KB)
-    function compressImage(base64, maxKB, callback) {
-      const img = new Image();
-      img.onload = function() {
-        const canvas = document.createElement('canvas');
-        let w = img.width, h = img.height;
-        // Resize if too big
-        const maxDim = 256;
-        if (w > maxDim || h > maxDim) {
-          if (w > h) {
-            h = Math.round(h * maxDim / w);
-            w = maxDim;
-          } else {
-            w = Math.round(w * maxDim / h);
-            h = maxDim;
-          }
-        }
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, w, h);
-        let quality = 0.7;
-        let compressed = canvas.toDataURL('image/jpeg', quality);
-        // If still too big, reduce quality
-        while (compressed.length / 1024 > maxKB && quality > 0.2) {
-          quality -= 0.1;
-          compressed = canvas.toDataURL('image/jpeg', quality);
-        }
-        callback(compressed);
-      };
-      img.src = base64;
     }
 
-    // Password eye toggle with animation
-    togglePassword.onclick = function() {
-      if (editPassword.type === "password") {
-        editPassword.type = "text";
-        togglePassword.classList.add('closed');
-      } else {
-        editPassword.type = "password";
-        togglePassword.classList.remove('closed');
-      }
-    };
+    // Interval checking
+    function startTaskNotifications() {
+      tasks.forEach((t) => {
+        setInterval(() => { if(!t.completed) notifyTask(t); }, t.interval*60*1000);
+      });
+    }
 
-    // Save changes (only displayName, password, img can change)
-    editSaveBtn.onclick = async function() {
-      if (!editDisplayName.value.trim() || editPassword.value.length < 6) {
-        editMsg.textContent = "Display name and password required (min 6 chars).";
-        return;
-      }
-      editSaveBtn.disabled = true;
-      editMsg.textContent = "Saving...";
-      let imgToSave = newImgBase64 || editImgPreview.src;
-      const newUserData = {
-        username: currentUser, // never changes!
-        displayName: editDisplayName.value.trim(),
-        password: editPassword.value,
-        img: imgToSave
-      };
-      // Save to LocalStorage
-      localStorage.setItem('user_' + currentUser, JSON.stringify(newUserData));
-      // Save to Firestore
-      try {
-        await db.collection('users').doc(currentUser).set(newUserData, { merge: true });
-        editMsg.textContent = "Saved!";
-        userData = newUserData;
-        localStorage.setItem('last_logged_in_user', currentUser); // persist session!
-        setUserUI();
-        setTimeout(() => {
-          editPopupBg.classList.remove('open');
-        }, 800);
-      } catch (err) {
-        editMsg.textContent = "Firebase error: " + err.message;
-      }
-      editSaveBtn.disabled = false;
-      newImgBase64 = null;
-    };
+    // Request permission
+    if (Notification.permission !== "granted") Notification.requestPermission().then(p => { if(p==="granted") startTaskNotifications(); });
+    else startTaskNotifications();
 
-    logoutBtn.onclick = function() {
-  localStorage.clear(); // This clears ALL localStorage keys!
-  if (firebase.auth) firebase.auth().signOut();
-  window.location.href = "index.html";
-};
-    // --- On load ---
-    loadUserData();
+    // Logout
+    logoutBtn.onclick = () => { localStorage.clear(); window.location.href="index.html"; };
   </script>
 </body>
-  </html>
+</html>
