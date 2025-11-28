@@ -595,5 +595,21 @@ handleConnectionChange();
 // --- END OF NEW JAVASCRIPT ---
 
 </script>
+  <script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('SW registered!', reg))
+      .catch(err => console.log('SW failed:', err));
+  });
+}
+
+// Ask for Notification Permission
+if ('Notification' in window && navigator.serviceWorker) {
+  Notification.requestPermission().then(permission => {
+    if (permission === 'granted') console.log('Notification permission granted!');
+  });
+}
+  </script>
 </body>
 </html>
