@@ -835,9 +835,18 @@ if (signupBtn) {
             // Write to Firestore
             await db.collection('users').doc(newUserId).set(userData);
             
-            // Save local session
-            // Keep local session for main.html to read
+            // ==========================================================
+            // FIX APPLIED HERE: MOVED PERSISTENCE & REDIRECT INSIDE TRY BLOCK
+            // ==========================================================
+            localStorage.setItem("user_" + newUserId, JSON.stringify(userData));
+            localStorage.setItem("last_logged_in_user", newUserId); 
 
+            signupMsg.innerHTML = `Success! Your User ID is: <b>${newUserId}</b><br>Redirecting...`;
+
+            setTimeout(() => {
+                window.location.replace(`main.html?user=${encodeURIComponent(newUserId)}`);
+            }, 1000);
+            
 
         } catch (err) {
             console.error(err);
@@ -847,19 +856,6 @@ if (signupBtn) {
     };
 }
 
-// index (1) (4).html - Inside signupBtn.onclick success block
-
-// Keep local session for main.html to read (Full Data)
-localStorage.setItem("user_" + newUserId, JSON.stringify(userData));
-
-// *** ADDED: Set the persistence key that index.html checks on refresh ***
-localStorage.setItem("last_logged_in_user", newUserId); 
-
-signupMsg.innerHTML = `Success! Your User ID is: <b>${newUserId}</b><br>Redirecting...`;
-
-setTimeout(() => {
-    window.location.replace(`main.html?user=${encodeURIComponent(newUserId)}`);
-}, 1000);
 
 // --- LOGIN LOGIC IMPLEMENTATION ---
 
@@ -900,7 +896,10 @@ if (loginBtn) {
 
             // Success
             // Keep local session for main.html to read
-localStorage.setItem("user_" + newUserId, JSON.stringify(userData));
+            // FIX APPLIED HERE: Used 'userId' and added 'last_logged_in_user'
+            localStorage.setItem("user_" + userId, JSON.stringify(userData));
+            localStorage.setItem("last_logged_in_user", userId); 
+
             loginMsg.textContent = "Login successful. Redirecting...";
 
             setTimeout(() => {
@@ -910,7 +909,123 @@ localStorage.setItem("user_" + newUserId, JSON.stringify(userData));
         } catch (err) {
             console.error(err);
             loginMsg.textContent = "Login error: " + err.message;
+        } finally {
             loginBtn.disabled = false;
+            loginUser.classList.remove('input-error');
+            loginPass.classList.remove('input-error');
+        }
+    };
+}
+
+
+// 2. Google Login on Login Card Handler (Already correct)
+if (googleLoginBtnLogin) {
+    googleLoginBtnLogin.onclick = async function() {
+        if (isGoogleSigningIn) return;
+        isGoogleSigningIn = true;
+        loginMsg.textContent = "Opening Google Sign-in...";
+        googleLoginBtnLogin.disabled = true;
+
+        const provider = new firebase.auth.GoogleAuthProvider();
+        
+        try {
+            const result = await firebase.auth().signInWithPopup(provider);
+            const user = result.user;
+
+            // Check if the Google email is linked to an account in Firestore
+            const usersRef = db.collection('users');
+            const snapshot = await usersRef.where("googleEmail", "==", user.email).get();
+
+            if (snapshot.empty) {
+                // Account not found via Google email
+                loginMsg.innerHTML = "⚠️ No account found linked to this Google email.<br>Please sign up first.";
+                googleLoginBtnLogin.disabled = false;
+                return;
+            }
+            
+            // Account found! Log them in.
+            const userData = snapshot.docs[0].data();
+            const userId = userData.userId;
+
+            // Save full user data locally for main.html
+            localStorage.setItem("user_" + userId, JSON.stringify(userData));
+            localStorage.setItem("last_logged_in_user", userId); 
+
+            loginMsg.textContent = "Google Login successful. Redirecting...";
+
+            setTimeout(() => {
+                window.location.replace(`main.html?user=${encodeURIComponent(userId)}`);
+            }, 500);
+
+        } catch (err) {
+            console.error(err);
+            loginMsg.textContent = "Google login error: " + err.message;
+        } finally {
+            isGoogleSigningIn = false;
+            googleLoginBtnLogin.disabled = false;
+        }
+    };
+}
+
+// Clear error state on input
+if (loginUser) loginUser.oninput = () => loginUser.classList.remove('input-error');
+if (loginPass) loginPass.oninput = () => loginPass.classList.remove('input-error');
+
+
+
+
+// --- LOGIN LOGIC IMPLEMENTATION ---
+
+// 1. Traditional Login Handler
+if (loginBtn) {
+    loginBtn.onclick = async function() {
+        const userId = loginUser.value.trim();
+        const password = loginPass.value;
+
+        if (!userId || !password) {
+            loginMsg.textContent = "Please enter both User ID and Password.";
+            return;
+        }
+
+        loginBtn.disabled = true;
+        loginMsg.textContent = "Logging in...";
+
+        try {
+            // Check if user exists in Firestore
+            const userDoc = await db.collection('users').doc(userId).get();
+
+            if (!userDoc.exists) {
+                loginMsg.textContent = "⚠️ User not found. Please check your User ID.";
+                loginUser.classList.add('input-error');
+                loginBtn.disabled = false;
+                return;
+            }
+
+            const userData = userDoc.data();
+
+            // Check password
+            if (userData.password !== password) {
+                loginMsg.textContent = "⚠️ Wrong password. Please try again.";
+                loginPass.classList.add('input-error');
+                loginBtn.disabled = false;
+                return;
+            }
+
+            // Success
+            // Keep local session for main.html to read
+            // FIX APPLIED HERE: Used 'userId' and added 'last_logged_in_user'
+            localStorage.setItem("user_" + userId, JSON.stringify(userData));
+            localStorage.setItem("last_logged_in_user", userId);
+
+            loginMsg.textContent = "Login successful. Redirecting...";
+
+            setTimeout(() => {
+                window.location.replace(`main.html?user=${encodeURIComponent(userId)}`);
+            }, 500);
+
+        } catch (err) {
+            console.error(err);
+            loginMsg.textContent = "Login error: " + err.message;
         } finally {
             loginBtn.disabled = false;
             loginUser.classList.remove('input-error');
@@ -949,15 +1064,15 @@ if (googleLoginBtnLogin) {
             const userData = snapshot.docs[0].data();
             const userId = userData.userId;
 
-// Save full user data locally for main.html
-localStorage.setItem("user_" + userId, JSON.stringify(userData));
-localStorage.setItem("last_logged_in_user", userId); // THIS IS THE PERSISTENCE KEY
+            // Save full user data locally for main.html
+            localStorage.setItem("user_" + userId, JSON.stringify(userData));
+            localStorage.setItem("last_logged_in_user", userId); // THIS IS THE PERSISTENCE KEY
 
-loginMsg.textContent = "Google Login successful. Redirecting...";
+            loginMsg.textContent = "Google Login successful. Redirecting...";
 
-setTimeout(() => {
-    window.location.replace(`main.html?user=${encodeURIComponent(userId)}`);
-}, 500);
+            setTimeout(() => {
+                window.location.replace(`main.html?user=${encodeURIComponent(userId)}`);
+            }, 500);
 
         } catch (err) {
             console.error(err);
@@ -972,8 +1087,6 @@ setTimeout(() => {
 // Clear error state on input
 if (loginUser) loginUser.oninput = () => loginUser.classList.remove('input-error');
 if (loginPass) loginPass.oninput = () => loginPass.classList.remove('input-error');
-
-
 
 
 </script>
