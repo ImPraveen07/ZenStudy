@@ -494,6 +494,25 @@ markDoneBtn.onclick = function() {
 };
 
 updateProgress();
+    // --- Notification logic ---
+function notifyTask(task) {
+  if (Notification.permission === 'granted') {
+    navigator.serviceWorker.getRegistration().then(reg => {
+      reg.showNotification('ZenStudy Reminder', {
+        body: `Task "${task}" is pending!`,
+        icon: '/Picsart_25-11-28_15-47-25-082.png',
+        badge: '/Picsart_25-11-28_15-47-16-095.png',
+        data: { url: '/jeeee.html' }
+      });
+    });
+  }
+}
+
+// Check task every hour
+setInterval(() => {
+  let taskPending = localStorage.getItem('subject_completed') !== 'true';
+  if (taskPending) notifyTask('Complete your subject of the day!');
+}, 60 * 60 * 1000); // 1 hour
     // --- Edit popup logic ---
     userImg.onclick = function() {
       fixedUsername.textContent = "Account: " + currentUser;
