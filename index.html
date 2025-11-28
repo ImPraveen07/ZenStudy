@@ -337,6 +337,19 @@ if (lastUser) {
 }
 </script>
 <script>
+const lastUser = localStorage.getItem("last_logged_in_user");
+
+// --- INITIAL REDIRECT LOGIC (FAST CHECK) ---
+if (lastUser) {
+  const userData = localStorage.getItem("user_" + lastUser);
+  
+  // redirect ONLY if user exists in localStorage
+  if (userData) {
+    window.location.replace(`main.html?user=${encodeURIComponent(lastUser)}`);
+  }
+}
+</script>
+<script>
 
   /**
  * ==========================================
@@ -344,9 +357,9 @@ if (lastUser) {
  * ==========================================
  */
 const firebaseConfig = {
-    apiKey: "AIzaSyC9rehsf-0jkb9dAeT1-0Z1C-yRJ0YI9dA",
-    authDomain: "gymnm-ce84b.firebaseapp.com",
-    projectId: "gymnm-ce84b",
+    apiKey: "AIzaSyC9rehsf-0jkb9dAeT1-0Z1C-yRJ0YI9dA", // <-- !!! REPLACE THIS !!!
+    authDomain: "gymnm-ce84b.firebaseapp.com", // <-- !!! REPLACE THIS !!!
+    projectId: "gymnm-ce84b", // <-- !!! REPLACE THIS !!!
     storageBucket: "gymnm-ce84b.appspot.com",
     messagingSenderId: "474926929394",
     appId: "1:474926929394:web:6abdb807caba2751a5c76b",
@@ -399,7 +412,7 @@ function isAgeBetween7And21(dobStr) {
     return age >= 7 && age <= 21;
 }
 
-// Image to Base64 Converter (with Error Handling)
+// Image to Base64 Converter (with Error Handling for CORS)
 async function imageUrlToBase64(url) {
     try {
         const response = await fetch(url);
@@ -419,10 +432,10 @@ async function imageUrlToBase64(url) {
 /**
  * ==========================================
  * 3. AUTO-REDIRECT LOGIC
+ * (Handled by the script block above)
  * ==========================================
  */
 
-// Your existing redirect logic is outside this block but is fine.
 
 /**
  * ==========================================
@@ -836,7 +849,7 @@ if (signupBtn) {
             await db.collection('users').doc(newUserId).set(userData);
             
             // ==========================================================
-            // FIX APPLIED HERE: MOVED PERSISTENCE & REDIRECT INSIDE TRY BLOCK
+            // PERSISTENCE & REDIRECT
             // ==========================================================
             localStorage.setItem("user_" + newUserId, JSON.stringify(userData));
             localStorage.setItem("last_logged_in_user", newUserId); 
@@ -856,7 +869,8 @@ if (signupBtn) {
     };
 }
 
-      // --- LOGIN LOGIC IMPLEMENTATION ---
+
+// --- LOGIN LOGIC IMPLEMENTATION ---
 
 // 1. Traditional Login Handler
 if (loginBtn) {
@@ -894,7 +908,7 @@ if (loginBtn) {
             }
 
             // Success
-            // Keep local session for main.html to read (FIXED)
+            // Keep local session for main.html to read
             localStorage.setItem("user_" + userId, JSON.stringify(userData));
             localStorage.setItem("last_logged_in_user", userId); 
 
@@ -945,9 +959,9 @@ if (googleLoginBtnLogin) {
             const userData = snapshot.docs[0].data();
             const userId = userData.userId;
 
-            // Save full user data locally for main.html (CORRECT)
+            // Save full user data locally for main.html
             localStorage.setItem("user_" + userId, JSON.stringify(userData));
-            localStorage.setItem("last_logged_in_user", userId); // THIS IS THE PERSISTENCE KEY
+            localStorage.setItem("last_logged_in_user", userId); 
 
             loginMsg.textContent = "Google Login successful. Redirecting...";
 
@@ -968,7 +982,8 @@ if (googleLoginBtnLogin) {
 // Clear error state on input
 if (loginUser) loginUser.oninput = () => loginUser.classList.remove('input-error');
 if (loginPass) loginPass.oninput = () => loginPass.classList.remove('input-error');
-      
+
+
 </script>
 </body>
 </html>
