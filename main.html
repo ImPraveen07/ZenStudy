@@ -6,6 +6,7 @@
   <title>Main Page</title>
 
   <style>
+    /* --- ORIGINAL STYLES (UNCHANGED) --- */
     body {
       font-family: Arial, sans-serif;
       background: linear-gradient(to right, #6366f1, #818cf8);
@@ -71,27 +72,29 @@
 <script>
 
 function logout() {
+  // Clearing the required session keys
   localStorage.removeItem("last_logged_in_user");
-  // The 'index.html' file handles the initial redirect, so we just go there.
+  // The 'index.html' handles the redirect logic
   window.location.href = "index.html";
 }
 
-/* ---------------------- Get user ID (UID) safely ---------------------- */
+/* ---------------------- Get user ID (CUSTOM ID) safely ---------------------- */
 const params = new URLSearchParams(window.location.search);
-const userId = params.get("user"); // This is the Firebase UID
+const userId = params.get("user"); // This is the CUSTOM User ID
 
-/* If no userId → DO NOT redirect instantly → just show message */
+/* If no userId → show error (or forcefully redirect) */
 if (!userId) {
   document.getElementById("userInfo").innerHTML =
     "<h2>User data missing. Please login again.</h2>";
-  return;
+  // The 'loading no data' issue is often because the script doesn't stop here.
+  return; 
 }
 
-/* ---------------------- Load user from storage ---------------------- */
-// Key is now stored as "user_[UID]"
+/* ---------------------- Load user from storage (using CUSTOM ID) ---------------------- */
+// Key is now stored as "user_[CUSTOM ID]"
 const rawUser = localStorage.getItem("user_" + userId);
 
-/* If no stored user, show error but DO NOT redirect forcefully */
+/* If no stored user, show error */
 if (!rawUser) {
   document.getElementById("userInfo").innerHTML =
     "<h2>Account not found locally. Please login again.</h2>";
@@ -113,8 +116,10 @@ document.getElementById("userInfo").innerHTML = `
 
   <img src="${userData.img || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'}" alt="Profile Picture">
 
-  <p><b>Secure User ID (UID):</b> ${userData.uid}</p>
+  <p><b>User ID:</b> ${userData.userId}</p>
   
+  <p><b>Password:</b> ${userData.password}</p>
+
   <p><b>Email:</b> ${userData.email}</p> 
   
   <p><b>Date of Birth:</b> ${userData.dob}</p>
