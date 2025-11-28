@@ -72,12 +72,13 @@
 
 function logout() {
   localStorage.removeItem("last_logged_in_user");
+  // The 'index.html' file handles the initial redirect, so we just go there.
   window.location.href = "index.html";
 }
 
-/* ---------------------- Get user ID safely ---------------------- */
+/* ---------------------- Get user ID (UID) safely ---------------------- */
 const params = new URLSearchParams(window.location.search);
-const userId = params.get("user");
+const userId = params.get("user"); // This is the Firebase UID
 
 /* If no userId → DO NOT redirect instantly → just show message */
 if (!userId) {
@@ -87,12 +88,13 @@ if (!userId) {
 }
 
 /* ---------------------- Load user from storage ---------------------- */
+// Key is now stored as "user_[UID]"
 const rawUser = localStorage.getItem("user_" + userId);
 
 /* If no stored user, show error but DO NOT redirect forcefully */
 if (!rawUser) {
   document.getElementById("userInfo").innerHTML =
-    "<h2>Account not found. Please login again.</h2>";
+    "<h2>Account not found locally. Please login again.</h2>";
   return;
 }
 
@@ -109,11 +111,12 @@ try {
 document.getElementById("userInfo").innerHTML = `
   <h1>Welcome, ${userData.username} 👋</h1>
 
-  <img src="${userData.img || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'}">
+  <img src="${userData.img || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'}" alt="Profile Picture">
 
-  <p><b>User ID:</b> ${userData.userId}</p>
-  <p><b>Password:</b> ${userData.password}</p>
-  <p><b>Email:</b> ${userData.googleEmail}</p>
+  <p><b>Secure User ID (UID):</b> ${userData.uid}</p>
+  
+  <p><b>Email:</b> ${userData.email}</p> 
+  
   <p><b>Date of Birth:</b> ${userData.dob}</p>
 
   <button class="logout-btn" onclick="logout()">Logout</button>
